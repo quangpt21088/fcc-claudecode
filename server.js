@@ -68,7 +68,25 @@ function isDefaultPassword(data) {
   return data.adminPassword === DEFAULT_PASSWORD;
 }
 
-// ===== API: GET all data (public — safe fields only) =====
+// ===== API: INIT — create data.json with default password if empty =====
+app.post('/api/init', async (req, res) => {
+  const data = readData();
+  if (!data.adminPassword) {
+    // First time setup — create with default password
+    try {
+      const defaultData = JSON.parse(fs.readFileSync(path.join(__dirname, 'default-data.json'), 'utf8'));
+      writeData(defaultData);
+      res.json({ ok: true, message: 'Initialized with default password: admin123' });
+    } catch(e) {
+      // Fallback: create minimal data.json
+      const fallback = { adminPassword: DEFAULT_PASSWORD };
+      writeData(fallback);
+      res.json({ ok: true, message: 'Initialized with fallback. Default password: admin123' });
+    }
+  } else {
+    res.json({ ok: false, message: 'Already initialized' });
+  }
+});
 app.get('/api/data', (req, res) => {
   const data = readData();
   const safe = { ...data };
