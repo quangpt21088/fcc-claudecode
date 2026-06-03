@@ -209,16 +209,12 @@ async function saveData(data) {
           flatVals
         );
       }
-      // Save courses (delete + reinsert)
+      // Save courses (delete + reinsert in parallel)
       await db.query('DELETE FROM courses');
-      for (let i = 0; i < (data.courses||[]).length; i++) {
-        await dbInsertCourse(data.courses[i], i);
-      }
-      // Save schedule
+      await Promise.all((data.courses||[]).map((c, i) => dbInsertCourse(c, i)));
+      // Save schedule (delete + reinsert in parallel)
       await db.query('DELETE FROM schedule');
-      for (let i = 0; i < (data.schedule||[]).length; i++) {
-        await dbInsertSchedule(data.schedule[i], i);
-      }
+      await Promise.all((data.schedule||[]).map((r, i) => dbInsertSchedule(r, i)));
       return;
     } catch(e) {
       console.error('⚠️ DB save error, falling back to file:', e.message);
