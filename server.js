@@ -443,6 +443,33 @@ app.post('/api/admin/reset-password', async (req, res) => {
   res.json({ ok: true, message: 'Password reset to admin123' });
 });
 
+// ===== API: FIX ALL VISIBLE (debug helper) =====
+app.post('/api/admin/fix-visible', async (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(401).json({ error: 'missing_password' });
+  const hash = await getAdminPassword();
+  let valid = false;
+  if (hash && hash.startsWith('$2')) {
+    valid = await bcrypt.compare(password, hash);
+  } else {
+    valid = (password === hash);
+  }
+  if (!valid) return res.status(401).json({ error: 'wrong_password' });
+  if (useDb) {
+    try {
+      await db.query('UPDATE courses SET visible = true');
+      return res.json({ ok: true, message: 'All courses set to visible' });
+    } catch(e) {
+      console.error('⚠️ DB fix visible error:', e.message);
+    }
+  }
+  // File fallback
+  const data = readDataFile();
+  data.courses = (data.courses||[]).map(c => ({...c, visible: true}));
+  writeDataFile(data);
+  res.json({ ok: true, message: 'All courses set to visible (file)' });
+});
+
 // ===== API: SEED DATA (manual reset — use with caution) =====
 // This OVERWRITES all data from default-data.json. Password is preserved.
 app.post('/api/seed', async (req, res) => {

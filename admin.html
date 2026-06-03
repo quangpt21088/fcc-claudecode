@@ -334,6 +334,7 @@ function renderTab(tab){
         +'<div><label class="admin-label">Thời lượng</label><input class="admin-input ec" data-idx="'+i+'" data-f="duration" value="'+esc(ci.duration)+'"/></div>'
         +'<div><label class="admin-label">Sĩ số</label><input class="admin-input ec" data-idx="'+i+'" data-f="maxStudents" value="'+esc(ci.maxStudents)+'"/></div>'
         +'<div><label class="admin-label">Buổi/tuần</label><input class="admin-input ec" data-idx="'+i+'" data-f="sessions" value="'+esc(ci.sessions)+'"/></div>'
+        +'<div class="col-span-2"><label class="admin-label"><input type="checkbox" class="ec" data-idx="'+i+'" data-f="visible" '+(isVisible?'checked':'')+'/> Hiển thị khóa học</label></div>'
         +'<div class="col-span-2"><label class="admin-label">Mô tả</label><textarea class="admin-input admin-textarea ec" data-idx="'+i+'" data-f="desc">'+esc(ci.desc)+'</textarea></div>'
         +'<div class="col-span-2"><label class="admin-label">Features (mỗi dòng 1)</label><textarea class="admin-input admin-textarea ec" data-idx="'+i+'" data-f="features">'+(ci.features||[]).join('\n')+'</textarea></div>'
         +'</div></div>';
@@ -481,13 +482,16 @@ function saveAll(){
 
   if(CURRENT_TAB==='courses'){
     var courses=[];var idxs={};
-    document.querySelectorAll('.ec').forEach(function(f){var i=f.dataset.idx;if(!idxs[i])idxs[i]={};idxs[i][f.dataset.f]=f.value;});
+    document.querySelectorAll('.ec').forEach(function(f){
+      var i=f.dataset.idx;if(!idxs[i])idxs[i]={};
+      if(f.type==='checkbox'){idxs[i][f.dataset.f]=f.checked;}
+      else{idxs[i][f.dataset.f]=f.value;}
+    });
     Object.keys(idxs).sort(function(a,b){return +a-+b;}).forEach(function(k){
       var cc=idxs[k];
       if(cc.features) cc.features=cc.features.split('\n').filter(Boolean);
-      // Preserve visible field
-      var visible = ADMIN_DATA.courses[+k] ? ADMIN_DATA.courses[+k].visible : true;
-      cc.visible = visible;
+      // Default visible to true if not set
+      if(cc.visible===undefined) cc.visible = (ADMIN_DATA.courses[+k]||{}).visible !== false;
       courses.push(cc);
     });
     ADMIN_DATA.courses=courses;
