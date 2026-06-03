@@ -77,7 +77,14 @@ async function dbGetAll() {
     const schedule = await db.query('SELECT * FROM schedule ORDER BY sort_order, id');
     
     const data = {};
-    settings.rows.forEach(r => { data[r.key] = r.value; });
+    settings.rows.forEach(r => {
+      // Try to parse JSON for array/object fields
+      if (r.key === 'approach' || r.key === 'why') {
+        try { data[r.key] = JSON.parse(r.value); } catch(e) { data[r.key] = r.value; }
+      } else {
+        data[r.key] = r.value;
+      }
+    });
     
     data.courses = courses.rows.map(r => ({
       id: r.id,
@@ -102,6 +109,10 @@ async function dbGetAll() {
       status: r.status,
       statusText: r.status_text
     }));
+    
+    // Ensure approach and why are always arrays
+    if (!data.approach || !Array.isArray(data.approach)) data.approach = [];
+    if (!data.why || !Array.isArray(data.why)) data.why = [];
     
     return data;
   } catch(e) {
@@ -180,11 +191,12 @@ async function getData() {
 async function saveData(data) {
   if (useDb) {
     try {
-      // Save settings
+      // Save settings — serialize arrays/objects as JSON
       const skipKeys = ['adminPassword', 'courses', 'schedule'];
       for (const key of Object.keys(data)) {
         if (!skipKeys.includes(key)) {
-          await dbSetSetting(key, data[key]);
+          const val = (typeof data[key] === 'object') ? JSON.stringify(data[key]) : String(data[key]);
+          await dbSetSetting(key, val);
         }
       }
       // Save courses (delete + reinsert)
