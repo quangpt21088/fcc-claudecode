@@ -68,23 +68,24 @@ function isDefaultPassword(data) {
   return data.adminPassword === DEFAULT_PASSWORD;
 }
 
-// ===== API: INIT — create data.json with default password if empty =====
+// ===== API: INIT — merge default content into data.json if empty =====
 app.post('/api/init', async (req, res) => {
   const data = readData();
-  if (!data.adminPassword) {
-    // First time setup — create with default password
+  // If data.json has no content fields (only password or empty), merge defaults
+  if (!data.siteName && !data.courses) {
     try {
       const defaultData = JSON.parse(fs.readFileSync(path.join(__dirname, 'default-data.json'), 'utf8'));
-      writeData(defaultData);
-      res.json({ ok: true, message: 'Initialized with default password: admin123' });
+      // Merge: keep existing password, fill in everything else from defaults
+      const merged = { ...defaultData, ...data };
+      writeData(merged);
+      res.json({ ok: true, message: 'Initialized with default content. Default password: admin123' });
     } catch(e) {
-      // Fallback: create minimal data.json
       const fallback = { adminPassword: DEFAULT_PASSWORD };
       writeData(fallback);
       res.json({ ok: true, message: 'Initialized with fallback. Default password: admin123' });
     }
   } else {
-    res.json({ ok: false, message: 'Already initialized' });
+    res.json({ ok: false, message: 'Already has content, skipping init' });
   }
 });
 app.get('/api/data', (req, res) => {
@@ -204,6 +205,24 @@ app.post('/api/register', (req, res) => {
       res.status(502).json({ error: 'forward_failed' });
     });
 });
+
+// ===== AUTO-INIT on startup =====
+// If data.json doesn't exist or has no content, merge defaults
+(function autoInit() {
+  const data = readData();
+  if (!data.siteName && !data.courses) {
+    try {
+      const defaultData = JSON.parse(fs.readFileSync(path.join(__dirname, 'default-data.json'), 'utf8'));
+      const merged = { ...defaultData, ...data };
+      writeData(merged);
+      console.log('✅ Auto-initialized data.json from default-data.json');
+    } catch(e) {
+      console.log('⚠️ Could not auto-init:', e.message);
+    }
+  } else {
+    console.log('✅ data.json already has content, skipping auto-init');
+  }
+})();
 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
