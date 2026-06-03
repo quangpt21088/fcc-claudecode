@@ -26,6 +26,14 @@
 </head>
 <body class="font-sans bg-gray-50 text-gray-800 antialiased">
 
+<!-- Loading Overlay -->
+<div id="page-loader" style="position:fixed;inset:0;z-index:9999;background:#f9fafb;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+  <div style="width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#4c6ef5;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+  <p style="color:#9ca3af;font-size:14px;font-weight:500;">Đang tải...</p>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+</body>
+
 <a href="#main-content" class="skip-link">⏭ Bỏ qua và đến nội dung</a>
 
 <!-- ==================== MODULE 1: HEADER ==================== -->
@@ -631,13 +639,20 @@ var ADMIN = {
 
 // ===== DOM Ready =====
 document.addEventListener('DOMContentLoaded', function(){
+  // Show loading overlay
+  var loader = document.getElementById('page-loader');
+  if(loader) loader.style.display = 'flex';
+  
   // Load default data first, then server data
   loadDefaultData().then(function(){
     return loadDataFromServer();
   }).then(function(){
     renderPage();
+    // Hide loader
+    if(loader) loader.style.display = 'none';
   }).catch(function(){
     renderPage();
+    if(loader) loader.style.display = 'none';
   });
 
   // Mobile menu
