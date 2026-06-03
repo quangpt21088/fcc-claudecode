@@ -393,6 +393,22 @@ app.post('/api/admin/reset-password', async (req, res) => {
   res.json({ ok: true, message: 'Password reset to admin123' });
 });
 
+// ===== API: SEED DATA (for initial setup) =====
+app.post('/api/seed', async (req, res) => {
+  try {
+    const defaultData = JSON.parse(fs.readFileSync(path.join(__dirname, 'default-data.json'), 'utf8'));
+    // Don't overwrite password if already set
+    const currentData = await getData();
+    if (currentData && currentData.adminPassword) {
+      defaultData.adminPassword = currentData.adminPassword;
+    }
+    await saveData(defaultData);
+    res.json({ ok: true, message: 'Data seeded successfully' });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ===== API: FORM SUBMISSION =====
 app.post('/api/register', async (req, res) => {
   const { parentName, phone, studentName, class: className, note } = req.body;
