@@ -191,27 +191,31 @@ async function getData() {
 async function saveData(data) {
   if (useDb) {
     try {
-      // ALWAYS preserve adminPassword from current DB — never overwrite
-      const savedPw = await getAdminPassword();
-      // Save settings — serialize arrays/objects as JSON
+      // BATCH: Save ALL settings in a single transaction
       const skipKeys = ['adminPassword', 'courses', 'schedule'];
+      const settingsArr = [];
       for (const key of Object.keys(data)) {
         if (!skipKeys.includes(key)) {
           const val = (typeof data[key] === 'object') ? JSON.stringify(data[key]) : String(data[key]);
-          await dbSetSetting(key, val);
+          settingsArr.push([key, val]);
         }
       }
-      // Restore password after save
-      if (savedPw) {
-        await dbSetSetting('adminPassword', savedPw);
+      // Batch upsert settings — single round-trip
+      if (settingsArr.length > 0) {
+        const placeholders = settingsArr.map((_,i) => `($${i*2+1}, $${i*2+2})`).join(',');
+        const flatVals = settingsArr.flat();
+        await db.query(
+          `INSERT INTO settings (key, value) VALUES ${placeholders} ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+          flatVals
+        );
       }
       // Save courses (delete + reinsert)
-      await dbDeleteAllCourses();
+      await db.query('DELETE FROM courses');
       for (let i = 0; i < (data.courses||[]).length; i++) {
         await dbInsertCourse(data.courses[i], i);
       }
       // Save schedule
-      await dbDeleteAllSchedule();
+      await db.query('DELETE FROM schedule');
       for (let i = 0; i < (data.schedule||[]).length; i++) {
         await dbInsertSchedule(data.schedule[i], i);
       }
@@ -220,14 +224,7 @@ async function saveData(data) {
       console.error('⚠️ DB save error, falling back to file:', e.message);
     }
   }
-  // File mode: still skip adminPassword in settings loop, restore after
-  const savedFilePw = readDataFile().adminPassword;
   writeDataFile(data);
-  if (savedFilePw && !data.adminPassword) {
-    const d = readDataFile();
-    d.adminPassword = savedFilePw;
-    writeDataFile(d);
-  }
 }
 
 async function getAdminPassword() {
