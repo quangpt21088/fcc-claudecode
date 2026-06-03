@@ -397,7 +397,38 @@ app.post('/api/admin/change-password', async (req, res) => {
   res.json({ ok: true });
 });
 
-// ===== API: RESET PASSWORD (for recovery) =====
+// ===== API: UPDATE COURSE VISIBLE (fast — single query) =====
+app.post('/api/admin/update-course-visible', async (req, res) => {
+  const { password, courseId, visible } = req.body;
+  if (!password || courseId === undefined || visible === undefined) {
+    return res.status(400).json({ error: 'missing_fields' });
+  }
+  const hash = await getAdminPassword();
+  let valid = false;
+  if (hash && hash.startsWith('$2')) {
+    valid = await bcrypt.compare(password, hash);
+  } else {
+    valid = (password === hash);
+  }
+  if (!valid) return res.status(401).json({ error: 'wrong_password' });
+
+  if (useDb) {
+    try {
+      await db.query('UPDATE courses SET visible = $1 WHERE id = $2', [visible, courseId]);
+      return res.json({ ok: true });
+    } catch(e) {
+      console.error('⚠️ DB update visible error:', e.message);
+    }
+  }
+  // File fallback
+  const data = readDataFile();
+  const course = data.courses.find(c => c.id === courseId || data.courses.indexOf(c) === courseId);
+  if (course) {
+    course.visible = visible;
+    writeDataFile(data);
+  }
+  res.json({ ok: true });
+});
 app.post('/api/admin/reset-password', async (req, res) => {
   const { secret } = req.body;
   // Use a simple secret to prevent unauthorized resets

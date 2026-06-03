@@ -525,10 +525,18 @@ document.getElementById('tab-content').addEventListener('click',function(e){
   if(t.classList.contains('mc-del')){ADMIN_DATA.courses.splice(idx,1);saveData(ADMIN_DATA, SESSION_PW);renderTab('courses');toast('Đã xóa');}
   if(t.classList.contains('mc-visibility')){
     var curVisible = ADMIN_DATA.courses[idx].visible !== false;
-    ADMIN_DATA.courses[idx].visible = !curVisible;
-    saveData(ADMIN_DATA, SESSION_PW).then(function(){
-      renderTab('courses');
-      toast(!curVisible ? '✅ Đã hiện khóa học' : '👁️ Đã ẩn khóa học');
+    var newVisible = !curVisible;
+    ADMIN_DATA.courses[idx].visible = newVisible;
+    renderTab('courses'); // instant UI update
+    // Save via fast API (single query)
+    var pw = SESSION_PW;
+    if(!pw){var input=prompt('Nhập mật khẩu admin để lưu:');if(!input)return;pw=input;SESSION_PW=pw;}
+    fetch('/api/admin/update-course-visible', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest'},
+      body:JSON.stringify({password:pw, courseId: ADMIN_DATA.courses[idx].id || idx, visible: newVisible})
+    }).then(function(r){return r.json();}).then(function(){
+      toast(newVisible ? '✅ Đã hiện khóa học' : '👁️ Đã ẩn khóa học');
     }).catch(function(){ toast('❌ Lưu thất bại','error'); });
   }
   if(t.classList.contains('mc-move')){var n=idx+dir;if(n<0||n>=ADMIN_DATA.courses.length)return;var tmp=ADMIN_DATA.courses[idx];ADMIN_DATA.courses[idx]=ADMIN_DATA.courses[n];ADMIN_DATA.courses[n]=tmp;saveData(ADMIN_DATA, SESSION_PW);renderTab('courses');}

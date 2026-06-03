@@ -783,10 +783,16 @@ document.addEventListener('DOMContentLoaded', function(){
       if(t.classList.contains('admin-mc-vis')){
         var i=+t.dataset.idx;
         var curVisible = ADMIN_DATA.courses[i].visible !== false;
-        ADMIN_DATA.courses[i].visible = !curVisible;
+        var newVisible = !curVisible;
+        ADMIN_DATA.courses[i].visible = newVisible;
         renderPage(); ADMIN.renderTab('courses');
-        saveDataToServer(SESSION_PW).then(function(){
-          ADMIN.toast(!curVisible ? '✅ Đã hiện khóa học' : '👁️ Đã ẩn khóa học');
+        // Fast API — single query update
+        fetch('/api/admin/update-course-visible', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest'},
+          body:JSON.stringify({password:SESSION_PW, courseId: ADMIN_DATA.courses[i].id || i, visible: newVisible})
+        }).then(function(r){return r.json();}).then(function(){
+          ADMIN.toast(newVisible ? '✅ Đã hiện khóa học' : '👁️ Đã ẩn khóa học');
         }).catch(function(){ ADMIN.toast('❌ Lưu thất bại','error'); });
       }
       if(t.classList.contains('admin-mc-move')){
