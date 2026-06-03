@@ -313,7 +313,9 @@ function renderTab(tab){
       +'</div></div>'
       +'<div class="bg-white rounded-xl border border-gray-200 p-6"><div class="flex items-center justify-between mb-4"><h3 class="font-bold text-lg">Danh sách khóa học</h3><button id="add-course-btn" class="admin-btn-sm admin-btn-success">+ Thêm khóa</button></div>';
     ADMIN_DATA.courses.forEach(function(ci,i){
+      var isVisible = ci.visible !== false;
       c.innerHTML+='<div class="admin-section-card"><div class="flex items-center justify-between mb-3"><span class="font-bold text-sm text-brand-600">'+esc(ci.name)+'</span><div class="flex gap-1">'
+        +'<button class="admin-btn-sm admin-btn-ghost mc-visibility" data-idx="'+i+'" title="'+(isVisible?'Ẩn khóa học':'Hiện khóa học')+'">'+(isVisible?'👁️':'🙈')+'</button>'
         +'<button class="admin-btn-sm admin-btn-ghost mc-move" data-dir="-1" data-idx="'+i+'"'+(i===0?' disabled':'')+'>↑</button>'
         +'<button class="admin-btn-sm admin-btn-ghost mc-move" data-dir="1" data-idx="'+i+'"'+(i===ADMIN_DATA.courses.length-1?' disabled':'')+'>↓</button>'
         +'<button class="admin-btn-sm admin-btn-danger mc-del" data-idx="'+i+'">✕</button>'
@@ -480,7 +482,14 @@ function saveAll(){
   if(CURRENT_TAB==='courses'){
     var courses=[];var idxs={};
     document.querySelectorAll('.ec').forEach(function(f){var i=f.dataset.idx;if(!idxs[i])idxs[i]={};idxs[i][f.dataset.f]=f.value;});
-    Object.keys(idxs).sort(function(a,b){return +a-+b;}).forEach(function(k){var cc=idxs[k];if(cc.features) cc.features=cc.features.split('\n').filter(Boolean);courses.push(cc);});
+    Object.keys(idxs).sort(function(a,b){return +a-+b;}).forEach(function(k){
+      var cc=idxs[k];
+      if(cc.features) cc.features=cc.features.split('\n').filter(Boolean);
+      // Preserve visible field
+      var visible = ADMIN_DATA.courses[+k] ? ADMIN_DATA.courses[+k].visible : true;
+      cc.visible = visible;
+      courses.push(cc);
+    });
     ADMIN_DATA.courses=courses;
   }
   if(CURRENT_TAB==='approach'){
@@ -514,10 +523,16 @@ document.getElementById('tab-content').addEventListener('click',function(e){
   var idx=+t.dataset.idx, dir=+t.dataset.dir;
 
   if(t.classList.contains('mc-del')){ADMIN_DATA.courses.splice(idx,1);saveData(ADMIN_DATA, SESSION_PW);renderTab('courses');toast('Đã xóa');}
+  if(t.classList.contains('mc-visibility')){
+    var curVisible = ADMIN_DATA.courses[idx].visible !== false;
+    ADMIN_DATA.courses[idx].visible = !curVisible;
+    saveData(ADMIN_DATA, SESSION_PW).then(function(){
+      renderTab('courses');
+      toast(!curVisible ? '✅ Đã hiện khóa học' : '👁️ Đã ẩn khóa học');
+    }).catch(function(){ toast('❌ Lưu thất bại','error'); });
+  }
   if(t.classList.contains('mc-move')){var n=idx+dir;if(n<0||n>=ADMIN_DATA.courses.length)return;var tmp=ADMIN_DATA.courses[idx];ADMIN_DATA.courses[idx]=ADMIN_DATA.courses[n];ADMIN_DATA.courses[n]=tmp;saveData(ADMIN_DATA, SESSION_PW);renderTab('courses');}
-  if(t.id==='add-course-btn'){ADMIN_DATA.courses.push({name:'Khóa mới',shortName:'MỚI',emoji:'🆕',color:'blue',sub:'',desc:'Mô tả',features:[],duration:'2h/buổi',maxStudents:'Tối đa 8',sessions:'2 buổi/tuần'});saveData(ADMIN_DATA, SESSION_PW);renderTab('courses');toast('Đã thêm khóa học');}
-
-  if(t.classList.contains('ma-del')){ADMIN_DATA.approach.splice(idx,1);saveData(ADMIN_DATA, SESSION_PW);renderTab('approach');toast('Đã xóa');}
+  if(t.id==='add-course-btn'){ADMIN_DATA.courses.push({name:'Khóa mới',shortName:'MỚI',emoji:'🆕',color:'blue',visible:true,sub:'',desc:'Mô tả',features:[],duration:'2h/buổi',maxStudents:'Tối đa 8',sessions:'2 buổi/tuần'});saveData(ADMIN_DATA, SESSION_PW);renderTab('courses');toast('Đã thêm khóa học');}
   if(t.classList.contains('ma-move')){var n=idx+dir;if(n<0||n>=ADMIN_DATA.approach.length)return;var tmp=ADMIN_DATA.approach[idx];ADMIN_DATA.approach[idx]=ADMIN_DATA.approach[n];ADMIN_DATA.approach[n]=tmp;saveData(ADMIN_DATA, SESSION_PW);renderTab('approach');}
   if(t.id==='add-approach-btn'){ADMIN_DATA.approach.push({title:'Tiêu đề mới',desc:'Mô tả'});saveData(ADMIN_DATA, SESSION_PW);renderTab('approach');toast('Đã thêm');}
 

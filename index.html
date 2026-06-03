@@ -356,11 +356,13 @@ function renderPage(){
     orange: {g:'from-orange-50 to-red-50',b:'border-orange-100',badge:'bg-orange-100 text-orange-700',icon:'bg-orange-100',s:'hover:shadow-orange-200/50'}
   };
   if(grid){
-    grid.innerHTML = d.courses.map(function(c,i){
+    grid.innerHTML = d.courses.filter(function(c){ return c.visible !== false; }).map(function(c,i){
       var col = colors[c.color]||colors.blue;
       var featuresHtml = '';
       if(c.features) featuresHtml = '<ul class="mt-2 space-y-0.5" role="list">'+c.features.map(function(f){return '<li class="text-xs text-gray-400 flex items-center gap-1"><span class="text-green-500 font-bold" aria-hidden="true">✓</span> '+escapeHtml(f)+'</li>';}).join('')+'</ul>';
-      return '<div class="reveal group bg-gradient-to-br '+col.g+' rounded-2xl p-6 border '+col.b+' hover:scale-[1.02] transition-all duration-300 hover:shadow-xl '+col.s+' flex flex-col h-full" role="listitem"><div class="w-12 h-12 rounded-xl '+col.icon+' flex items-center justify-center text-2xl mb-4" aria-hidden="true">'+c.emoji+'</div><div class="inline-flex px-3 py-1 '+col.badge+' text-xs font-bold rounded-full mb-3 w-fit">'+c.shortName+'</div><h3 class="text-xl font-bold text-gray-900 mb-1">'+c.name+'</h3>'+(c.sub?'<p class="text-xs font-medium text-gray-400 mb-1">'+c.sub+'</p>':'')+'<p class="text-sm text-gray-500 mb-3">'+c.desc+'</p>'+featuresHtml+'<div class="flex items-center gap-4 text-xs text-gray-400 border-t '+col.b+' pt-3 mt-3"><span class="flex items-center gap-1">🕐 '+c.duration+'</span><span class="flex items-center gap-1">👥 '+c.maxStudents+'</span><span class="flex items-center gap-1">📅 '+c.sessions+'</span></div><div class="mt-auto pt-4"><button class="course-register-btn w-full py-2.5 bg-gradient-to-r from-brand-600 to-purple-600 text-white text-sm font-semibold rounded-xl hover:shadow-lg hover:shadow-brand-600/30 transition-all hover:-translate-y-0.5" data-course-idx="'+i+'">Đăng ký ngay</button></div></div>';
+      // find original index for register button
+      var origIdx = d.courses.indexOf(c);
+      return '<div class="reveal group bg-gradient-to-br '+col.g+' rounded-2xl p-6 border '+col.b+' hover:scale-[1.02] transition-all duration-300 hover:shadow-xl '+col.s+' flex flex-col h-full" role="listitem"><div class="w-12 h-12 rounded-xl '+col.icon+' flex items-center justify-center text-2xl mb-4" aria-hidden="true">'+c.emoji+'</div><div class="inline-flex px-3 py-1 '+col.badge+' text-xs font-bold rounded-full mb-3 w-fit">'+c.shortName+'</div><h3 class="text-xl font-bold text-gray-900 mb-1">'+c.name+'</h3>'+(c.sub?'<p class="text-xs font-medium text-gray-400 mb-1">'+c.sub+'</p>':'')+'<p class="text-sm text-gray-500 mb-3">'+c.desc+'</p>'+featuresHtml+'<div class="flex items-center gap-4 text-xs text-gray-400 border-t '+col.b+' pt-3 mt-3"><span class="flex items-center gap-1">🕐 '+c.duration+'</span><span class="flex items-center gap-1">👥 '+c.maxStudents+'</span><span class="flex items-center gap-1">📅 '+c.sessions+'</span></div><div class="mt-auto pt-4"><button class="course-register-btn w-full py-2.5 bg-gradient-to-r from-brand-600 to-purple-600 text-white text-sm font-semibold rounded-xl hover:shadow-lg hover:shadow-brand-600/30 transition-all hover:-translate-y-0.5" data-course-idx="'+origIdx+'">Đăng ký ngay</button></div></div>';
     }).join('');
   }
 
@@ -394,7 +396,7 @@ function renderPage(){
 
   // Form select
   var sel = document.getElementById('form-class-select');
-  if(sel) sel.innerHTML = '<option value="" disabled selected>-- Chọn lớp --</option>'+d.courses.map(function(c){ return '<option value="'+c.name+'">'+c.name+'</option>'; }).join('');
+  if(sel) sel.innerHTML = '<option value="" disabled selected>-- Chọn lớp --</option>'+d.courses.filter(function(c){ return c.visible !== false; }).map(function(c){ return '<option value="'+c.name+'">'+c.name+'</option>'; }).join('');
 
   // FABs
   var fabZ = document.getElementById('fab-zalo'), fabC = document.getElementById('fab-call');
@@ -501,7 +503,8 @@ var ADMIN = {
     } else if(tab==='courses'){
       var html='<div class="space-y-4"><div class="flex items-center justify-between"><h4 class="font-bold text-sm uppercase tracking-wide">Khóa học</h4><button class="admin-btn-sm admin-btn-success" id="admin-add-course">+ Thêm</button></div><div class="grid grid-cols-2 gap-3"><div><label class="admin-label">Tiêu đề</label><input class="admin-input" data-key="coursesSectionTitle" value="'+this.esc(d.coursesSectionTitle)+'"/></div><div><label class="admin-label">Mô tả</label><input class="admin-input" data-key="coursesSectionDesc" value="'+this.esc(d.coursesSectionDesc)+'"/></div></div>';
       d.courses.forEach(function(c,i){
-        html+='<div class="admin-section-card"><div class="flex items-center justify-between mb-2"><span class="font-bold text-sm">Lớp '+(i+1)+'</span><div class="flex gap-1"><button class="admin-btn-sm admin-btn-ghost admin-mc-move" data-idx="'+i+'" data-dir="-1" '+(i===0?'disabled':'')+'>↑</button><button class="admin-btn-sm admin-btn-ghost admin-mc-move" data-idx="'+i+'" data-dir="1" '+(i===d.courses.length-1?'disabled':'')+'>↓</button><button class="admin-btn-sm admin-btn-danger admin-mc-del" data-idx="'+i+'">✕</button></div></div><div class="grid grid-cols-2 gap-2"><div><label class="admin-label">Tên</label><input class="admin-input cf" data-idx="'+i+'" data-f="name" value="'+escapeHtml(c.name)+'"/></div><div><label class="admin-label">Tên ngắn</label><input class="admin-input cf" data-idx="'+i+'" data-f="shortName" value="'+escapeHtml(c.shortName)+'"/></div><div><label class="admin-label">Emoji</label><input class="admin-input cf" data-idx="'+i+'" data-f="emoji" value="'+escapeHtml(c.emoji)+'"/></div><div><label class="admin-label">Màu</label><select class="admin-input cf" data-idx="'+i+'" data-f="color"><option value="blue"'+(c.color==='blue'?'selected':'')+'>blue</option><option value="green"'+(c.color==='green'?'selected':'')+'>green</option><option value="purple"'+(c.color==='purple'?'selected':'')+'>purple</option><option value="orange"'+(c.color==='orange'?'selected':'')+'>orange</option></select></div><div><label class="admin-label">Thời lượng</label><input class="admin-input cf" data-idx="'+i+'" data-f="duration" value="'+escapeHtml(c.duration)+'"/></div><div><label class="admin-label">Sĩ số</label><input class="admin-input cf" data-idx="'+i+'" data-f="maxStudents" value="'+escapeHtml(c.maxStudents)+'"/></div><div class="col-span-2"><label class="admin-label">Mô tả</label><textarea class="admin-input admin-textarea cf" data-idx="'+i+'" data-f="desc">'+escapeHtml(c.desc)+'</textarea></div><div class="col-span-2"><label class="admin-label">Buổi/tuần</label><input class="admin-input cf" data-idx="'+i+'" data-f="sessions" value="'+escapeHtml(c.sessions)+'"/></div></div></div>';
+        var isVisible = c.visible !== false;
+        html+='<div class="admin-section-card"><div class="flex items-center justify-between mb-2"><span class="font-bold text-sm '+(isVisible?'text-brand-600':'text-gray-400')+'">'+(isVisible?'👁️ ':'🙈 ')+escapeHtml(c.name)+'</span><div class="flex gap-1"><button class="admin-btn-sm admin-btn-ghost admin-mc-vis" data-idx="'+i+'" title="'+(isVisible?'Ẩn khóa học':'Hiện khóa học')+'">'+(isVisible?'👁️':'🙈')+'</button><button class="admin-btn-sm admin-btn-ghost admin-mc-move" data-idx="'+i+'" data-dir="-1" '+(i===0?'disabled':'')+'>↑</button><button class="admin-btn-sm admin-btn-ghost admin-mc-move" data-idx="'+i+'" data-dir="1" '+(i===d.courses.length-1?'disabled':'')+'>↓</button><button class="admin-btn-sm admin-btn-danger admin-mc-del" data-idx="'+i+'">✕</button></div></div><div class="grid grid-cols-2 gap-2"><div><label class="admin-label">Tên</label><input class="admin-input cf" data-idx="'+i+'" data-f="name" value="'+escapeHtml(c.name)+'"/></div><div><label class="admin-label">Tên ngắn</label><input class="admin-input cf" data-idx="'+i+'" data-f="shortName" value="'+escapeHtml(c.shortName)+'"/></div><div><label class="admin-label">Emoji</label><input class="admin-input cf" data-idx="'+i+'" data-f="emoji" value="'+escapeHtml(c.emoji)+'"/></div><div><label class="admin-label">Màu</label><select class="admin-input cf" data-idx="'+i+'" data-f="color"><option value="blue"'+(c.color==='blue'?'selected':'')+'>blue</option><option value="green"'+(c.color==='green'?'selected':'')+'>green</option><option value="purple"'+(c.color==='purple'?'selected':'')+'>purple</option><option value="orange"'+(c.color==='orange'?'selected':'')+'>orange</option></select></div><div><label class="admin-label">Thời lượng</label><input class="admin-input cf" data-idx="'+i+'" data-f="duration" value="'+escapeHtml(c.duration)+'"/></div><div><label class="admin-label">Sĩ số</label><input class="admin-input cf" data-idx="'+i+'" data-f="maxStudents" value="'+escapeHtml(c.maxStudents)+'"/></div><div class="col-span-2"><label class="admin-label">Mô tả</label><textarea class="admin-input admin-textarea cf" data-idx="'+i+'" data-f="desc">'+escapeHtml(c.desc)+'</textarea></div><div class="col-span-2"><label class="admin-label">Buổi/tuần</label><input class="admin-input cf" data-idx="'+i+'" data-f="sessions" value="'+escapeHtml(c.sessions)+'"/></div><div class="col-span-2"><label class="admin-label">Features (mỗi dòng 1)</label><textarea class="admin-input admin-textarea cf" data-idx="'+i+'" data-f="features">'+(c.features||[]).join('\n')+'</textarea></div></div></div>';
       });
       html+='<button class="admin-btn-sm admin-btn-primary" id="admin-save-courses">💾 Lưu</button></div>';
       body.innerHTML = html;
@@ -559,7 +562,12 @@ var ADMIN = {
         if(!idxs[i]) idxs[i] = {};
         idxs[i][f.dataset.f] = f.value;
       });
-      Object.keys(idxs).sort(function(a,b){return +a-+b;}).forEach(function(k){courses.push(idxs[k]);});
+      Object.keys(idxs).sort(function(a,b){return +a-+b;}).forEach(function(k){
+        // Preserve visible field from existing ADMIN_DATA
+        var visible = ADMIN_DATA.courses[+k] ? ADMIN_DATA.courses[+k].visible : true;
+        idxs[k].visible = visible;
+        courses.push(idxs[k]);
+      });
       Object.keys(data).forEach(function(k){ADMIN_DATA[k]=data[k];});
       ADMIN_DATA.courses = courses;
       renderPage();
@@ -772,6 +780,15 @@ document.addEventListener('DOMContentLoaded', function(){
       if(t.id==='admin-save-schedule'){ADMIN.saveWithPassword(function(){return ADMIN.doSaveSchedule();});}
       if(t.id==='admin-save-contact'){ADMIN.saveWithPassword(function(){return ADMIN.doSaveContact();});}
       if(t.classList.contains('admin-mc-del')){var i=+t.dataset.idx; ADMIN_DATA.courses.splice(i,1); renderPage(); ADMIN.renderTab('courses'); ADMIN.toast('Đã xóa');}
+      if(t.classList.contains('admin-mc-vis')){
+        var i=+t.dataset.idx;
+        var curVisible = ADMIN_DATA.courses[i].visible !== false;
+        ADMIN_DATA.courses[i].visible = !curVisible;
+        renderPage(); ADMIN.renderTab('courses');
+        saveDataToServer(SESSION_PW).then(function(){
+          ADMIN.toast(!curVisible ? '✅ Đã hiện khóa học' : '👁️ Đã ẩn khóa học');
+        }).catch(function(){ ADMIN.toast('❌ Lưu thất bại','error'); });
+      }
       if(t.classList.contains('admin-mc-move')){
         var i=+t.dataset.idx, dir=+t.dataset.dir, n=i+dir;
         if(n<0||n>=ADMIN_DATA.courses.length) return;
@@ -779,7 +796,7 @@ document.addEventListener('DOMContentLoaded', function(){
         renderPage(); ADMIN.renderTab('courses');
       }
       if(t.id==='admin-add-course'){
-        ADMIN_DATA.courses.push({name:'Khóa mới',shortName:'MỚI',emoji:'🆕',color:'blue',desc:'Mô tả',duration:'2h/buổi',maxStudents:'Tối đa 15',sessions:'2 buổi/tuần'});
+        ADMIN_DATA.courses.push({name:'Khóa mới',shortName:'MỚI',emoji:'🆕',color:'blue',visible:true,desc:'Mô tả',duration:'2h/buổi',maxStudents:'Tối đa 15',sessions:'2 buổi/tuần'});
         renderPage(); ADMIN.renderTab('courses'); ADMIN.toast('Đã thêm khóa học');
       }
       if(t.classList.contains('admin-ms-del')){var i=+t.dataset.idx; ADMIN_DATA.schedule.splice(i,1); renderPage(); ADMIN.renderTab('schedule'); ADMIN.toast('Đã xóa');}
