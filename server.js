@@ -191,6 +191,8 @@ async function getData() {
 async function saveData(data) {
   if (useDb) {
     try {
+      // ALWAYS preserve adminPassword from current DB — never overwrite
+      const savedPw = await getAdminPassword();
       // Save settings — serialize arrays/objects as JSON
       const skipKeys = ['adminPassword', 'courses', 'schedule'];
       for (const key of Object.keys(data)) {
@@ -198,6 +200,10 @@ async function saveData(data) {
           const val = (typeof data[key] === 'object') ? JSON.stringify(data[key]) : String(data[key]);
           await dbSetSetting(key, val);
         }
+      }
+      // Restore password after save
+      if (savedPw) {
+        await dbSetSetting('adminPassword', savedPw);
       }
       // Save courses (delete + reinsert)
       await dbDeleteAllCourses();
@@ -214,7 +220,14 @@ async function saveData(data) {
       console.error('⚠️ DB save error, falling back to file:', e.message);
     }
   }
+  // File mode: still skip adminPassword in settings loop, restore after
+  const savedFilePw = readDataFile().adminPassword;
   writeDataFile(data);
+  if (savedFilePw && !data.adminPassword) {
+    const d = readDataFile();
+    d.adminPassword = savedFilePw;
+    writeDataFile(d);
+  }
 }
 
 async function getAdminPassword() {
@@ -241,21 +254,26 @@ async function setAdminPassword(hash) {
 }
 
 // ===== AUTO-INIT =====
+// Chỉ chạy khi DB/file HOÀN TOÀN trống (fresh deploy, chưa có gì)
+// KHÔNG bao giờ reset password hay ghi đè dữ liệu đã có
 async function autoInit() {
   const data = await getData();
-  if (!data.siteName && !data.courses) {
+  // Check if DB/file has ANY content at all
+  const hasContent = data.siteName || data.courses || data.approach || data.schedule || data.heroTitle1;
+  
+  if (!hasContent) {
+    // Truly fresh deploy — seed from default-data.json
     try {
       const defaultData = JSON.parse(fs.readFileSync(path.join(__dirname, 'default-data.json'), 'utf8'));
-      const merged = { ...defaultData, ...data };
-      // Always set password to default on fresh deploy
-      merged.adminPassword = DEFAULT_PASSWORD;
-      await saveData(merged);
-      console.log('✅ Auto-initialized from default-data.json (password reset to admin123)');
+      // Use adminPassword from default, nothing else to preserve (empty DB)
+      await saveData(defaultData);
+      console.log('✅ Fresh deploy: auto-initialized from default-data.json');
     } catch(e) {
       console.log('⚠️ Could not auto-init:', e.message);
     }
   } else {
-    console.log('✅ Data already exists, skipping auto-init');
+    // DB already has data — DO NOT touch anything
+    console.log('✅ Data already exists, skipping auto-init (no overwrite)');
   }
 }
 
@@ -393,17 +411,17 @@ app.post('/api/admin/reset-password', async (req, res) => {
   res.json({ ok: true, message: 'Password reset to admin123' });
 });
 
-// ===== API: SEED DATA (for initial setup) =====
+// ===== API: SEED DATA (manual reset — use with caution) =====
+// This OVERWRITES all data from default-data.json. Password is preserved.
 app.post('/api/seed', async (req, res) => {
   try {
     const defaultData = JSON.parse(fs.readFileSync(path.join(__dirname, 'default-data.json'), 'utf8'));
-    // Don't overwrite password if already set
+    // Preserve current adminPassword — never overwrite it
     const currentData = await getData();
-    if (currentData && currentData.adminPassword) {
-      defaultData.adminPassword = currentData.adminPassword;
-    }
+    const savedPassword = currentData ? currentData.adminPassword : null;
+    defaultData.adminPassword = savedPassword || defaultData.adminPassword;
     await saveData(defaultData);
-    res.json({ ok: true, message: 'Data seeded successfully' });
+    res.json({ ok: true, message: 'Data seeded successfully (password preserved)' });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
