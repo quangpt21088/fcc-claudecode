@@ -303,7 +303,13 @@ setInterval(function() {
 
 // ===== MIDDLEWARE =====
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(__dirname));
+app.use(express.static(__dirname, {
+  etag: false,
+  lastModified: false,
+  setHeaders: function(res) {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  }
+}));
 
 function requireAjax(req, res, next) {
   if (req.headers['x-requested-with'] !== 'XMLHttpRequest') {
@@ -314,6 +320,8 @@ function requireAjax(req, res, next) {
 
 // ===== API: PUBLIC DATA =====
 app.get('/api/data', async (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  res.set('Pragma', 'no-cache');
   const data = await getData();
   const safe = { ...data };
   delete safe.adminPassword;

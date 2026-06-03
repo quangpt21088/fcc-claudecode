@@ -296,10 +296,12 @@ function loadDefaultData() {
 }
 
 function loadDataFromServer() {
-  return fetch('/api/data')
+  // Add cache-buster timestamp
+  return fetch('/api/data?_=' + Date.now())
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      ADMIN_DATA = Object.assign({}, DEFAULT_DATA, data);
+      // Server data takes priority — don't merge with default
+      ADMIN_DATA = Object.assign({}, data);
       DATA_LOADED = true;
       return ADMIN_DATA;
     })
