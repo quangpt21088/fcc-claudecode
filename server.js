@@ -235,8 +235,10 @@ async function autoInit() {
     try {
       const defaultData = JSON.parse(fs.readFileSync(path.join(__dirname, 'default-data.json'), 'utf8'));
       const merged = { ...defaultData, ...data };
+      // Always set password to default on fresh deploy
+      merged.adminPassword = DEFAULT_PASSWORD;
       await saveData(merged);
-      console.log('✅ Auto-initialized from default-data.json');
+      console.log('✅ Auto-initialized from default-data.json (password reset to admin123)');
     } catch(e) {
       console.log('⚠️ Could not auto-init:', e.message);
     }
@@ -366,6 +368,17 @@ app.post('/api/admin/change-password', async (req, res) => {
   const newHash = await bcrypt.hash(newPassword, 10);
   await setAdminPassword(newHash);
   res.json({ ok: true });
+});
+
+// ===== API: RESET PASSWORD (for recovery) =====
+app.post('/api/admin/reset-password', async (req, res) => {
+  const { secret } = req.body;
+  // Use a simple secret to prevent unauthorized resets
+  if (secret !== 'reset123') {
+    return res.status(403).json({ error: 'invalid_secret' });
+  }
+  await setAdminPassword(DEFAULT_PASSWORD);
+  res.json({ ok: true, message: 'Password reset to admin123' });
 });
 
 // ===== API: FORM SUBMISSION =====
