@@ -46,34 +46,118 @@ app.get('/api/content', async (req, res) => {
       return res.json(contentCache);
     }
 
+    // Settings key-value
     const { rows: settingsRows } = await pool.query('SELECT key, value FROM settings');
-    const settings = {};
-    for (const r of settingsRows) settings[r.key] = r.value;
+    const S = {};
+    for (const r of settingsRows) S[r.key] = r.value;
 
+    // Courses (chỉ hiện hidden=false)
     const { rows: coursesRows } = await pool.query(
       'SELECT * FROM courses WHERE hidden = false ORDER BY sort_order ASC'
     );
 
+    // Schedule
+    const { rows: scheduleRows } = await pool.query(
+      'SELECT * FROM schedule ORDER BY sort_order ASC'
+    );
+
+    // Approach
+    const { rows: approachRows } = await pool.query(
+      'SELECT * FROM approach ORDER BY sort_order ASC'
+    );
+
+    // Why
+    const { rows: whyRows } = await pool.query(
+      'SELECT * FROM why_items ORDER BY sort_order ASC'
+    );
+
     const data = {
-      hero: {
-        title: settings.hero_title || '',
-        subtitle: settings.hero_subtitle || '',
-        statYears: settings.stat_years || '',
-        statStudents: settings.stat_students || '',
-        statRating: settings.stat_rating || '',
-      },
-      teacher: {
-        name: settings.teacher_name || '',
-        bio: settings.teacher_bio || '',
-      },
+      // Site
+      siteName: S.site_name || 'Ngữ Văn',
+      siteNameAccent: S.site_name_accent || 'THCS',
+
+      // Hero
+      heroBadge: S.hero_badge || 'Đang nhận học viên mới',
+      heroTitle1: S.hero_title1 || 'Khơi nguồn tư duy',
+      heroTitle2: S.hero_title2 || 'Bứt phá điểm số',
+      heroDesc: S.hero_desc || '',
+      heroStat1Value: S.hero_stat1_value || '10+',
+      heroStat1Label: S.hero_stat1_label || 'Năm kinh nghiệm',
+      heroStat2Value: S.hero_stat2_value || '500+',
+      heroStat2Label: S.hero_stat2_label || 'Học sinh',
+      heroStat3Value: S.hero_stat3_value || '4.9/5',
+      heroStat3Label: S.hero_stat3_label || 'Đánh giá',
+
+      // Teacher
+      teacherName: S.teacher_name || 'Thầy/Cô [Tên]',
+      teacherLabel: S.teacher_label || 'Giáo viên Ngữ Văn THCS',
+      teacherPhoto: S.teacher_photo || '',
+      teacherPhotoAlt: S.teacher_photo_alt || 'Giáo viên Ngữ Văn THCS',
+      teacherBio: S.teacher_bio || '',
+      satisfactionValue: S.satisfaction_value || '98%',
+      satisfactionLabel: S.satisfaction_label || 'Học sinh hài lòng',
+
+      // Courses section
+      coursesSectionTitle: S.courses_section_title || 'Chọn lớp phù hợp',
+      coursesSectionDesc: S.courses_section_desc || '',
+
+      // Schedule section
+      scheduleSectionTitle: S.schedule_section_title || 'Lịch học tuần này',
+      scheduleSectionDesc: S.schedule_section_desc || '',
+
+      // Form
+      formSectionTitle: S.form_section_title || 'Đăng ký ngay hôm nay',
+      formSectionDesc: S.form_section_desc || 'Điền thông tin bên dưới, chúng tôi sẽ liên hệ trong 24h',
+
+      // Footer
+      footerBrand: S.footer_brand || 'Ngữ Văn',
+      footerBrandAccent: S.footer_brand_accent || 'THCS',
+      footerDesc: S.footer_desc || '',
+      footerHotline: S.footer_hotline || '0xxx.xxx.xxx',
+      footerAddress: S.footer_address || '[Địa chỉ cụ thể của lớp học]',
+      footerMap: S.footer_map || 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3919.5!2d106.7!3d10.8!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTDAJzQ4JzAwLjAiTiAxMDbKwDQyJzAwLjAiRQ!5e0!3m2!1svi!2s!4v1234567890',
+
+      // FABs
+      zaloUrl: S.zalo_url || '#',
+      hotlineNumber: S.hotline_number || '+84123456789',
+
+      // Data arrays
       courses: coursesRows.map(c => ({
         id: c.id,
         name: c.name,
-        grade: c.grade,
-        price: c.price,
-        dayOfWeek: c.day_of_week,
-        timeSlot: c.time_slot,
-        status: c.status,
+        shortName: c.short_name || c.name,
+        emoji: c.emoji || '📖',
+        color: c.color || 'blue',
+        sub: c.sub || '',
+        desc: c.desc || '',
+        features: c.features ? (Array.isArray(c.features) ? c.features : JSON.parse(c.features)) : [],
+        duration: c.duration || '2h/buổi',
+        maxStudents: c.max_students || 'Tối đa 10',
+        sessions: c.sessions || '2 buổi/tuần',
+        status: c.status || 'available',
+        price: c.price || '',
+      })),
+
+      schedule: scheduleRows.map(s => ({
+        id: s.id,
+        class: s.class_name || s.name || '',
+        time: s.time_slot || '',
+        days: s.days || '',
+        status: s.status || 'available',
+        statusText: s.status_text || '🟢 Còn chỗ',
+      })),
+
+      approach: approachRows.map(a => ({
+        id: a.id,
+        title: a.title || '',
+        desc: a.desc || '',
+      })),
+
+      why: whyRows.map(w => ({
+        id: w.id,
+        icon: w.icon || '🏆',
+        title: w.title || '',
+        desc: w.desc || '',
       })),
     };
 
@@ -145,28 +229,16 @@ app.get('/api/admin/courses', auth, async (req, res) => {
 // ─── PUT /api/admin/content — Cập nhật nội dung trang chủ ────
 app.put('/api/admin/content', auth, async (req, res) => {
   try {
-    const { hero, teacher } = req.body;
-    const updates = [];
-    if (hero) {
-      if (hero.title !== undefined) updates.push(['hero_title', hero.title]);
-      if (hero.subtitle !== undefined) updates.push(['hero_subtitle', hero.subtitle]);
-      if (hero.statYears !== undefined) updates.push(['stat_years', hero.statYears]);
-      if (hero.statStudents !== undefined) updates.push(['stat_students', hero.statStudents]);
-      if (hero.statRating !== undefined) updates.push(['stat_rating', hero.statRating]);
+    const updates = req.body;
+    for (const [key, value] of Object.entries(updates)) {
+      if (typeof value === 'string') {
+        await pool.query(
+          `INSERT INTO settings (key, value) VALUES ($1, $2)
+           ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
+          [key, value]
+        );
+      }
     }
-    if (teacher) {
-      if (teacher.name !== undefined) updates.push(['teacher_name', teacher.name]);
-      if (teacher.bio !== undefined) updates.push(['teacher_bio', teacher.bio]);
-    }
-
-    for (const [key, value] of updates) {
-      await pool.query(
-        `INSERT INTO settings (key, value) VALUES ($1, $2)
-         ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
-        [key, value]
-      );
-    }
-
     invalidateCache();
     res.json({ ok: true, message: 'Đã cập nhật nội dung' });
   } catch (err) {
@@ -175,8 +247,141 @@ app.put('/api/admin/content', auth, async (req, res) => {
   }
 });
 
+// ─── GET /api/admin/settings — Tất cả settings ────────────────
+app.get('/api/admin/settings', auth, async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT key, value FROM settings');
+    const settings = {};
+    for (const r of rows) settings[r.key] = r.value;
+    res.json(settings);
+  } catch (err) {
+    console.error('GET /api/admin/settings error:', err.message);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
+// ─── GET /api/admin/schedule — Tất cả lịch học ────────────────
+app.get('/api/admin/schedule', auth, async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM schedule ORDER BY sort_order ASC');
+    res.json(rows);
+  } catch (err) {
+    console.error('GET /api/admin/schedule error:', err.message);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
 // ─── PUT /api/admin/schedule — Cập nhật lịch học ─────────────
 app.put('/api/admin/schedule', auth, async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items)) return res.status(400).json({ error: 'Dữ liệu không hợp lệ' });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const s of items) {
+        await client.query(
+          `UPDATE schedule SET class_name = $1, time_slot = $2, days = $3, status = $4, status_text = $5, updated_at = NOW() WHERE id = $6`,
+          [s.class_name || s.class, s.time_slot || s.time, s.days, s.status, s.status_text || s.statusText, s.id]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+    invalidateCache();
+    res.json({ ok: true, message: 'Đã cập nhật lịch học' });
+  } catch (err) {
+    console.error('PUT /api/admin/schedule error:', err.message);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
+// ─── GET /api/admin/approach — Tất cả phương pháp ─────────────
+app.get('/api/admin/approach', auth, async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM approach ORDER BY sort_order ASC');
+    res.json(rows);
+  } catch (err) {
+    console.error('GET /api/admin/approach error:', err.message);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
+// ─── PUT /api/admin/approach — Cập nhật phương pháp ───────────
+app.put('/api/admin/approach', auth, async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items)) return res.status(400).json({ error: 'Dữ liệu không hợp lệ' });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const a of items) {
+        await client.query(
+          `UPDATE approach SET title = $1, desc = $2, updated_at = NOW() WHERE id = $3`,
+          [a.title, a.desc, a.id]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+    invalidateCache();
+    res.json({ ok: true, message: 'Đã cập nhật phương pháp' });
+  } catch (err) {
+    console.error('PUT /api/admin/approach error:', err.message);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
+// ─── GET /api/admin/why — Tất cả why items ────────────────────
+app.get('/api/admin/why', auth, async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM why_items ORDER BY sort_order ASC');
+    res.json(rows);
+  } catch (err) {
+    console.error('GET /api/admin/why error:', err.message);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
+// ─── PUT /api/admin/why — Cập nhật why items ──────────────────
+app.put('/api/admin/why', auth, async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items)) return res.status(400).json({ error: 'Dữ liệu không hợp lệ' });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const w of items) {
+        await client.query(
+          `UPDATE why_items SET icon = $1, title = $2, desc = $3, updated_at = NOW() WHERE id = $4`,
+          [w.icon, w.title, w.desc, w.id]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+    invalidateCache();
+    res.json({ ok: true, message: 'Đã cập nhật' });
+  } catch (err) {
+    console.error('PUT /api/admin/why error:', err.message);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
+// ─── PUT /api/admin/courses — Cập nhật khóa học ──────────────
+app.put('/api/admin/courses', auth, async (req, res) => {
   try {
     const { courses } = req.body;
     if (!Array.isArray(courses)) {
@@ -189,10 +394,14 @@ app.put('/api/admin/schedule', auth, async (req, res) => {
       for (const c of courses) {
         await client.query(
           `UPDATE courses SET
-            name = $1, price = $2, day_of_week = $3,
-            time_slot = $4, status = $5, hidden = $6, updated_at = NOW()
-           WHERE id = $7`,
-          [c.name, c.price, c.dayOfWeek, c.timeSlot, c.status, c.hidden, c.id]
+            name = $1, short_name = $2, emoji = $3, color = $4,
+            sub = $5, desc = $6, features = $7::jsonb,
+            duration = $8, max_students = $9, sessions = $10,
+            price = $11, status = $12, hidden = $13, updated_at = NOW()
+           WHERE id = $14`,
+          [c.name, c.short_name || c.shortName, c.emoji, c.color, c.sub, c.desc,
+           JSON.stringify(c.features || []), c.duration, c.max_students || c.maxStudents,
+           c.sessions, c.price, c.status, c.hidden, c.id]
         );
       }
       await client.query('COMMIT');
@@ -204,9 +413,9 @@ app.put('/api/admin/schedule', auth, async (req, res) => {
     }
 
     invalidateCache();
-    res.json({ ok: true, message: 'Đã cập nhật lịch học' });
+    res.json({ ok: true, message: 'Đã cập nhật khóa học' });
   } catch (err) {
-    console.error('PUT /api/admin/schedule error:', err.message);
+    console.error('PUT /api/admin/courses error:', err.message);
     res.status(500).json({ error: 'Lỗi server' });
   }
 });
