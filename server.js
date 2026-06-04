@@ -6,7 +6,8 @@ const bcrypt = require('bcryptjs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const DEFAULT_PASSWORD = 'admin123';
+const DEFAULT_PASSWORD = process.env.DEFAULT_PASSWORD || 'admin123';
+const RESET_SECRET = process.env.RESET_SECRET || 'reset123';
 const DATA_FILE = path.join(__dirname, 'data.json');
 
 // ===== DATABASE SETUP =====
@@ -133,11 +134,6 @@ async function dbSetSetting(key, value) {
   }
 }
 
-async function dbDeleteAllCourses() {
-  if (!useDb) return;
-  await db.query('DELETE FROM courses');
-}
-
 async function dbInsertCourse(c, sortOrder) {
   if (!useDb) return;
   await db.query(
@@ -145,11 +141,6 @@ async function dbInsertCourse(c, sortOrder) {
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
     [c.name, c.shortName, c.emoji, c.color, c.visible !== false, c.sub||'', c.desc||'', (c.features||[]).join('\n'), c.duration||'', c.maxStudents||'', c.sessions||'', sortOrder]
   );
-}
-
-async function dbDeleteAllSchedule() {
-  if (!useDb) return;
-  await db.query('DELETE FROM schedule');
 }
 
 async function dbInsertSchedule(r, sortOrder) {
@@ -175,10 +166,6 @@ function writeDataFile(data) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
-function isDefaultPassword(data) {
-  return data.adminPassword === DEFAULT_PASSWORD;
-}
-
 // ===== DATA ACCESS LAYER (DB or file) =====
 async function getData() {
   if (useDb) {
@@ -191,31 +178,38 @@ async function getData() {
 async function saveData(data) {
   if (useDb) {
     try {
-      // BATCH: Save ALL settings in a single transaction
-      const skipKeys = ['adminPassword', 'courses', 'schedule'];
-      const settingsArr = [];
-      for (const key of Object.keys(data)) {
-        if (!skipKeys.includes(key)) {
-          const val = (typeof data[key] === 'object') ? JSON.stringify(data[key]) : String(data[key]);
-          settingsArr.push([key, val]);
+      // Use transaction for atomicity
+      await db.query('BEGIN');
+      try {
+        // BATCH: Save ALL settings in a single statement
+        const skipKeys = ['adminPassword', 'courses', 'schedule'];
+        const settingsArr = [];
+        for (const key of Object.keys(data)) {
+          if (!skipKeys.includes(key)) {
+            const val = (typeof data[key] === 'object') ? JSON.stringify(data[key]) : String(data[key]);
+            settingsArr.push([key, val]);
+          }
         }
+        if (settingsArr.length > 0) {
+          const placeholders = settingsArr.map((_,i) => `($${i*2+1}, $${i*2+2})`).join(',');
+          const flatVals = settingsArr.flat();
+          await db.query(
+            `INSERT INTO settings (key, value) VALUES ${placeholders} ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+            flatVals
+          );
+        }
+        // Save courses (delete + reinsert in parallel)
+        await db.query('DELETE FROM courses');
+        await Promise.all((data.courses||[]).map((c, i) => dbInsertCourse(c, i)));
+        // Save schedule (delete + reinsert in parallel)
+        await db.query('DELETE FROM schedule');
+        await Promise.all((data.schedule||[]).map((r, i) => dbInsertSchedule(r, i)));
+        await db.query('COMMIT');
+        return;
+      } catch(innerErr) {
+        await db.query('ROLLBACK');
+        throw innerErr;
       }
-      // Batch upsert settings — single round-trip
-      if (settingsArr.length > 0) {
-        const placeholders = settingsArr.map((_,i) => `($${i*2+1}, $${i*2+2})`).join(',');
-        const flatVals = settingsArr.flat();
-        await db.query(
-          `INSERT INTO settings (key, value) VALUES ${placeholders} ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-          flatVals
-        );
-      }
-      // Save courses (delete + reinsert in parallel)
-      await db.query('DELETE FROM courses');
-      await Promise.all((data.courses||[]).map((c, i) => dbInsertCourse(c, i)));
-      // Save schedule (delete + reinsert in parallel)
-      await db.query('DELETE FROM schedule');
-      await Promise.all((data.schedule||[]).map((r, i) => dbInsertSchedule(r, i)));
-      return;
     } catch(e) {
       console.error('⚠️ DB save error, falling back to file:', e.message);
     }
@@ -290,15 +284,49 @@ function rateLimitCheck(ip) {
   return { allowed: true };
 }
 
+// ===== RATE LIMITING: SAVE =====
+const saveAttempts = new Map();
+const SAVE_MAX_ATTEMPTS = 10;
+const SAVE_LOCKOUT_MS = 60 * 1000; // 1 minute
+
+function saveRateLimitCheck(ip) {
+  const now = Date.now();
+  const rec = saveAttempts.get(ip);
+  if (!rec || now > rec.resetTime) {
+    saveAttempts.set(ip, { count: 1, resetTime: now + SAVE_LOCKOUT_MS });
+    return { allowed: true };
+  }
+  if (rec.count >= SAVE_MAX_ATTEMPTS) {
+    const waitSec = Math.ceil((rec.resetTime - now) / 1000);
+    return { allowed: false, waitSec };
+  }
+  rec.count++;
+  return { allowed: true };
+}
+
 setInterval(function() {
   const now = Date.now();
   for (const [ip, rec] of loginAttempts) {
     if (now > rec.resetTime) loginAttempts.delete(ip);
   }
+  for (const [ip, rec] of saveAttempts) {
+    if (now > rec.resetTime) saveAttempts.delete(ip);
+  }
 }, 10 * 60 * 1000);
 
 // ===== MIDDLEWARE =====
-app.use(express.json({ limit: '10mb' }));
+// HTTPS redirect (production only)
+if (process.env.NODE_ENV === 'production') {
+  app.use(function(req, res, next) {
+    if (req.headers['x-forwarded-proto'] !== 'https') {
+      return res.redirect(301, 'https://' + req.get('host') + req.url);
+    }
+    next();
+  });
+}
+
+app.use(express.json({ limit: '2mb' }));
+app.use(validateCsrf);
 app.use(express.static(__dirname, {
   etag: false,
   lastModified: false,
@@ -313,6 +341,44 @@ function requireAjax(req, res, next) {
   }
   next();
 }
+
+// ===== CSRF PROTECTION =====
+// Simple double-submit cookie pattern
+var csrfTokens = new Map(); // session → token
+var CSRF_MAX_AGE = 3600000; // 1 hour
+
+// Cleanup expired tokens
+setInterval(function() {
+  var now = Date.now();
+  for (const [sid, rec] of csrfTokens) {
+    if (now > rec.expires) csrfTokens.delete(sid);
+  }
+}, 30 * 60 * 1000);
+
+function generateCsrfToken(sessionId) {
+  var token = require('crypto').randomBytes(32).toString('hex');
+  csrfTokens.set(sessionId, { token: token, expires: Date.now() + CSRF_MAX_AGE });
+  return token;
+}
+
+function validateCsrf(req, res, next) {
+  // Skip for GET and login
+  if (req.method === 'GET' || req.path === '/api/admin/login') return next();
+  var sid = req.headers['x-csrf-session'] || req.ip;
+  var token = req.headers['x-csrf-token'];
+  var rec = csrfTokens.get(sid);
+  if (!rec || rec.token !== token || Date.now() > rec.expires) {
+    return res.status(403).json({ error: 'invalid_csrf' });
+  }
+  next();
+}
+
+// ===== API: CSRF TOKEN =====
+app.get('/api/csrf-token', function(req, res) {
+  var sid = req.ip;
+  var token = generateCsrfToken(sid);
+  res.json({ token: token, session: sid });
+});
 
 // ===== API: PUBLIC DATA =====
 app.get('/api/data', async (req, res) => {
@@ -356,6 +422,13 @@ app.post('/api/admin/save', async (req, res) => {
   const { password, data: newData } = req.body;
   if (!password) return res.status(401).json({ error: 'missing_password' });
 
+  // Rate limit save requests
+  const saveIp = req.ip || req.connection.remoteAddress;
+  const saveRl = saveRateLimitCheck(saveIp);
+  if (!saveRl.allowed) {
+    return res.status(429).json({ error: 'too_many_saves', waitSec: saveRl.waitSec });
+  }
+
   const hash = await getAdminPassword();
   let valid = false;
   if (hash && hash.startsWith('$2')) {
@@ -366,10 +439,70 @@ app.post('/api/admin/save', async (req, res) => {
 
   if (!valid) return res.status(401).json({ error: 'wrong_password' });
 
-  // Preserve adminPassword from current data
+  // Validate data structure
+  if (!newData || typeof newData !== 'object') {
+    return res.status(400).json({ error: 'invalid_data' });
+  }
+
+  // Whitelist allowed keys to prevent injection of unexpected fields
+  const allowedKeys = [
+    'siteName','siteNameAccent','heroBadge','heroTitle1','heroTitle2','heroDesc',
+    'heroStat1Value','heroStat1Label','heroStat2Value','heroStat2Label',
+    'heroStat3Value','heroStat3Label','teacherLabel','teacherName','teacherPhoto',
+    'teacherPhotoAlt','teacherBio','satisfactionValue','satisfactionLabel',
+    'coursesSectionTitle','coursesSectionDesc','courses',
+    'approach','why','scheduleSectionTitle','scheduleSectionDesc','schedule',
+    'formSectionTitle','formSectionDesc','appsScriptUrl',
+    'footerBrand','footerBrandAccent','footerDesc','footerHotline','footerAddress','footerMap',
+    'zaloUrl','hotlineNumber','adminPassword'
+  ];
+  const sanitized = {};
+  for (const key of allowedKeys) {
+    if (newData[key] !== undefined) sanitized[key] = newData[key];
+  }
+
+  // Validate courses array structure
+  if (sanitized.courses) {
+    if (!Array.isArray(sanitized.courses)) {
+      return res.status(400).json({ error: 'invalid_courses_format' });
+    }
+    sanitized.courses = sanitized.courses.map(function(c) {
+      return {
+        name: String(c.name||'').substring(0, 200),
+        shortName: String(c.shortName||'').substring(0, 50),
+        emoji: String(c.emoji||'').substring(0, 10),
+        color: ['blue','green','purple','orange'].indexOf(c.color) !== -1 ? c.color : 'blue',
+        visible: !!c.visible,
+        sub: String(c.sub||'').substring(0, 200),
+        desc: String(c.desc||'').substring(0, 2000),
+        features: Array.isArray(c.features) ? c.features.map(function(f){ return String(f).substring(0,200); }) : [],
+        duration: String(c.duration||'').substring(0, 50),
+        maxStudents: String(c.maxStudents||'').substring(0, 50),
+        sessions: String(c.sessions||'').substring(0, 50)
+      };
+    });
+  }
+
+  // Validate schedule array structure
+  if (sanitized.schedule) {
+    if (!Array.isArray(sanitized.schedule)) {
+      return res.status(400).json({ error: 'invalid_schedule_format' });
+    }
+    sanitized.schedule = sanitized.schedule.map(function(s) {
+      return {
+        class: String(s.class||'').substring(0, 100),
+        time: String(s.time||'').substring(0, 100),
+        days: String(s.days||'').substring(0, 100),
+        status: ['available','almost_full','full'].indexOf(s.status) !== -1 ? s.status : 'available',
+        statusText: String(s.statusText||'').substring(0, 100)
+      };
+    });
+  }
+
+  // Preserve adminPassword from current data (never overwrite from client)
   const currentData = await getData();
-  newData.adminPassword = currentData.adminPassword;
-  await saveData(newData);
+  sanitized.adminPassword = currentData.adminPassword;
+  await saveData(sanitized);
   res.json({ ok: true });
 });
 
@@ -436,38 +569,11 @@ app.post('/api/admin/update-course-visible', async (req, res) => {
 app.post('/api/admin/reset-password', async (req, res) => {
   const { secret } = req.body;
   // Use a simple secret to prevent unauthorized resets
-  if (secret !== 'reset123') {
+  if (secret !== RESET_SECRET) {
     return res.status(403).json({ error: 'invalid_secret' });
   }
   await setAdminPassword(DEFAULT_PASSWORD);
   res.json({ ok: true, message: 'Password reset to admin123' });
-});
-
-// ===== API: FIX ALL VISIBLE (debug helper) =====
-app.post('/api/admin/fix-visible', async (req, res) => {
-  const { password } = req.body;
-  if (!password) return res.status(401).json({ error: 'missing_password' });
-  const hash = await getAdminPassword();
-  let valid = false;
-  if (hash && hash.startsWith('$2')) {
-    valid = await bcrypt.compare(password, hash);
-  } else {
-    valid = (password === hash);
-  }
-  if (!valid) return res.status(401).json({ error: 'wrong_password' });
-  if (useDb) {
-    try {
-      await db.query('UPDATE courses SET visible = true');
-      return res.json({ ok: true, message: 'All courses set to visible' });
-    } catch(e) {
-      console.error('⚠️ DB fix visible error:', e.message);
-    }
-  }
-  // File fallback
-  const data = readDataFile();
-  data.courses = (data.courses||[]).map(c => ({...c, visible: true}));
-  writeDataFile(data);
-  res.json({ ok: true, message: 'All courses set to visible (file)' });
 });
 
 // ===== API: SEED DATA (manual reset — use with caution) =====

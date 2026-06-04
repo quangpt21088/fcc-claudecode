@@ -134,7 +134,7 @@
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="text-center mb-16 reveal">
       <div class="inline-flex items-center gap-2 px-4 py-2 bg-brand-50 rounded-full mb-4"><span class="text-sm font-semibold text-brand-600">Khóa học</span></div>
-      <h2 id="courses-title" class="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 mb-4" data-admin="coursesSectionTitle">Chọn lớp <span class="gradient-text">phù hợp</span></h2>
+      <h2 id="courses-title" class="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 mb-4" data-admin-html="coursesSectionTitle">Chọn lớp <span class="gradient-text">phù hợp</span></h2>
       <p class="text-lg text-gray-500 max-w-2xl mx-auto" data-admin="coursesSectionDesc">Tất cả các khung chương trình Ngữ Văn THCS từ Lớp 6 đến Lớp 9</p>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="courses-grid" role="list"></div>
@@ -146,7 +146,7 @@
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="text-center mb-16 reveal">
       <div class="inline-flex items-center gap-2 px-4 py-2 bg-brand-50 rounded-full mb-4"><span class="text-sm font-semibold text-brand-600">Lịch học</span></div>
-      <h2 id="schedule-title" class="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 mb-4" data-admin="scheduleSectionTitle">Lịch học <span class="gradient-text">tuần này</span></h2>
+      <h2 id="schedule-title" class="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 mb-4" data-admin-html="scheduleSectionTitle">Lịch học <span class="gradient-text">tuần này</span></h2>
       <p class="text-lg text-gray-500 max-w-2xl mx-auto" data-admin="scheduleSectionDesc">Cập nhật liên tục, đảm bảo học viên nắm rõ lịch trình</p>
     </div>
     <div class="reveal bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
@@ -186,7 +186,7 @@
   <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
     <div class="text-center mb-12 reveal">
       <div class="inline-flex items-center gap-2 px-4 py-2 bg-brand-50 rounded-full mb-4"><span class="text-sm font-semibold text-brand-600">Đăng ký</span></div>
-      <h2 id="form-title" class="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 mb-4" data-admin="formSectionTitle">Đăng ký <span class="gradient-text">ngay hôm nay</span></h2>
+      <h2 id="form-title" class="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 mb-4" data-admin-html="formSectionTitle">Đăng ký <span class="gradient-text">ngay hôm nay</span></h2>
       <p class="text-lg text-gray-500" data-admin="formSectionDesc">Điền thông tin bên dưới, chúng tôi sẽ liên hệ trong 24h</p>
     </div>
     <form id="register-form" class="reveal bg-white rounded-3xl shadow-xl border border-gray-100 p-8 lg:p-10 space-y-6" novalidate>
@@ -313,7 +313,8 @@ function loadDataFromServer() {
       DATA_LOADED = true;
       return ADMIN_DATA;
     })
-    .catch(function() {
+    .catch(function(err) {
+      console.error('Failed to load data from server:', err);
       try {
         var s = localStorage.getItem('infobyme_admin');
         if (s) ADMIN_DATA = Object.assign({}, DEFAULT_DATA, JSON.parse(s));
@@ -344,8 +345,14 @@ function escapeHtml(text){
 
 function renderPage(){
   var d = ADMIN_DATA;
+  // Safe text binding (default)
   document.querySelectorAll('[data-admin]').forEach(function(el){
     var k = el.dataset.admin;
+    if(d[k]!==undefined) el.textContent = d[k];
+  });
+  // HTML binding (only for fields that need rich content)
+  document.querySelectorAll('[data-admin-html]').forEach(function(el){
+    var k = el.dataset.adminHtml;
     if(d[k]!==undefined) el.innerHTML = d[k];
   });
   document.querySelectorAll('[data-admin-attr]').forEach(function(el){
