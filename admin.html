@@ -48,6 +48,7 @@ tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']},colors:
       <button class="admin-tab-btn" data-tab="approach">✍️ Phương pháp</button>
       <button class="admin-tab-btn" data-tab="why">💡 Tại sao</button>
       <button class="admin-tab-btn" data-tab="schedule">📅 Lịch học</button>
+      <button class="admin-tab-btn" data-tab="registrations">📋 Đăng ký</button>
       <button class="admin-tab-btn" data-tab="form">📝 Form đăng ký</button>
       <button class="admin-tab-btn" data-tab="contact">📞 Liên hệ & Footer</button>
       <button class="admin-tab-btn" data-tab="settings">⚙️ Cài đặt</button>
@@ -257,7 +258,7 @@ document.querySelectorAll('.admin-tab-btn').forEach(function(btn){
 function renderTab(tab){
   CURRENT_TAB=tab;
   var c=document.getElementById('tab-content');
-  var titles={general:'Tổng quan',hero:'Hero Section',courses:'Khóa học',approach:'Phương pháp',why:'Tại sao chọn chúng tôi',schedule:'Lịch học',form:'Form đăng ký',contact:'Liên hệ & Footer',settings:'Cài đặt'};
+  var titles={general:'Tổng quan',hero:'Hero Section',courses:'Khóa học',approach:'Phương pháp',why:'Tại sao chọn chúng tôi',schedule:'Lịch học',registrations:'Danh sách đăng ký',form:'Form đăng ký',contact:'Liên hệ & Footer',settings:'Cài đặt'};
   document.getElementById('page-title').textContent=titles[tab]||tab;
 
   if(tab==='general'){
@@ -393,6 +394,14 @@ function renderTab(tab){
     });
     c.innerHTML+='</div></div>';
   }
+  else if(tab==='registrations'){
+    c.innerHTML='<div class="max-w-5xl space-y-6">'
+      +'<div class="bg-white rounded-xl border border-gray-200 p-6">'
+      +'<div class="flex items-center justify-between mb-4"><h3 class="font-bold text-lg">Danh sách đăng ký</h3><button id="refresh-reg-btn" class="admin-btn-sm admin-btn-ghost">🔄 Refresh</button></div>'
+      +'<p class="text-sm text-gray-500 mb-4">Danh sách phụ huynh đã đăng ký qua form trên trang web.</p>'
+      +'<div id="reg-list-container"><p class="text-sm text-gray-400">Đang tải...</p></div>'
+      +'</div></div>';
+  }
   else if(tab==='form'){
     c.innerHTML='<div class="max-w-3xl space-y-6"><div class="bg-white rounded-xl border border-gray-200 p-6"><h3 class="font-bold text-lg mb-4">Form đăng ký</h3><div class="grid grid-cols-2 gap-4">'
       +inp('Tiêu đề form','formSectionTitle')+inp('Mô tả form','formSectionDesc')
@@ -436,6 +445,46 @@ function renderTab(tab){
     el.addEventListener('input',function(){setDirty(true);});
   });
   setDirty(false);
+
+  // Registrations tab: load data
+  if(tab==='registrations'){
+    var regContainer = document.getElementById('reg-list-container');
+    var pw = SESSION_PW;
+    if(!pw){regContainer.innerHTML='<p class="text-sm text-red-500">Cần đăng nhập lại để xem danh sách.</p>';return;}
+    fetch('/api/admin/registrations?password='+encodeURIComponent(pw), {headers:{'X-Requested-With':'XMLHttpRequest'}})
+      .then(function(r){return r.json();})
+      .then(function(j){
+        if(!j.ok){regContainer.innerHTML='<p class="text-sm text-red-500">Lỗi: '+(j.error||'không xác định')+'</p>';return;}
+        var regs = j.registrations;
+        if(!regs.length){regContainer.innerHTML='<p class="text-sm text-gray-400">Chưa có đăng ký nào.</p>';return;}
+        var html='<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="border-b border-gray-200"><th class="text-left py-2 px-3 font-semibold text-gray-600">STT</th><th class="text-left py-2 px-3 font-semibold text-gray-600">Phụ huynh</th><th class="text-left py-2 px-3 font-semibold text-gray-600">SĐT</th><th class="text-left py-2 px-3 font-semibold text-gray-600">Học sinh</th><th class="text-left py-2 px-3 font-semibold text-gray-600">Lớp</th><th class="text-left py-2 px-3 font-semibold text-gray-600">Ghi chú</th><th class="text-left py-2 px-3 font-semibold text-gray-600">Thời gian</th><th class="text-left py-2 px-3 font-semibold text-gray-600"></th></tr></thead><tbody>';
+        regs.forEach(function(r,i){
+          var created = r.created_at ? new Date(r.created_at).toLocaleString('vi-VN') : '-';
+          html+='<tr class="border-b border-gray-100 hover:bg-gray-50"><td class="py-2 px-3 text-gray-500">'+(i+1)+'</td><td class="py-2 px-3 font-medium text-gray-900">'+esc(r.parent_name)+'</td><td class="py-2 px-3 text-gray-600">'+esc(r.phone)+'</td><td class="py-2 px-3 text-gray-600">'+esc(r.student_name)+'</td><td class="py-2 px-3"><span class="inline-flex px-2 py-0.5 bg-brand-50 text-brand-700 text-xs font-medium rounded-full">'+esc(r.class)+'</span></td><td class="py-2 px-3 text-gray-500 max-w-xs truncate">'+(r.note?esc(r.note):'-')+'</td><td class="py-2 px-3 text-gray-500 whitespace-nowrap">'+created+'</td><td class="py-2 px-3"><button class="admin-btn-sm admin-btn-danger reg-del-btn" data-id="'+r.id+'">✕</button></td></tr>';
+        });
+        html+='</tbody></table></div>';
+        html+='<p class="text-xs text-gray-400 mt-3">Tổng: '+regs.length+' đăng ký</p>';
+        regContainer.innerHTML=html;
+        // Bind delete buttons
+        regContainer.querySelectorAll('.reg-del-btn').forEach(function(btn){
+          btn.addEventListener('click',function(){
+            if(!confirm('Xóa đăng ký này?'))return;
+            var id=this.dataset.id;
+            fetch('/api/admin/registrations/'+id,{method:'DELETE',headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest'},body:JSON.stringify({password:pw})})
+              .then(function(r){return r.json();})
+              .then(function(j){
+                if(j.ok){renderTab('registrations');toast('✅ Đã xóa');}
+                else{toast('❌ Xóa thất bại: '+(j.error||''),'error');}
+              })
+              .catch(function(){toast('❌ Lỗi mạng','error');});
+          });
+        });
+      })
+      .catch(function(){regContainer.innerHTML='<p class="text-sm text-red-500">Lỗi tải dữ liệu.</p>';});
+    // Refresh button
+    var refreshBtn = document.getElementById('refresh-reg-btn');
+    if(refreshBtn){refreshBtn.addEventListener('click',function(){renderTab('registrations');});}
+  }
 
   // Hero tab: photo upload + preview + gallery
   if(tab==='hero'){

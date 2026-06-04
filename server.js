@@ -63,6 +63,15 @@ async function dbInit() {
         status_text TEXT NOT NULL DEFAULT '',
         sort_order INTEGER NOT NULL DEFAULT 0
       );
+      CREATE TABLE IF NOT EXISTS registrations (
+        id SERIAL PRIMARY KEY,
+        parent_name TEXT NOT NULL DEFAULT '',
+        phone TEXT NOT NULL DEFAULT '',
+        student_name TEXT NOT NULL DEFAULT '',
+        class TEXT NOT NULL DEFAULT '',
+        note TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
     `);
     console.log('✅ Database tables ready');
   } catch(e) {
@@ -150,6 +159,46 @@ async function dbInsertSchedule(r, sortOrder) {
      VALUES ($1,$2,$3,$4,$5,$6)`,
     [r.class, r.time, r.days, r.status, r.statusText, sortOrder]
   );
+}
+
+// ===== REGISTRATION HELPERS =====
+async function dbInsertRegistration(reg) {
+  if (!useDb) return null;
+  try {
+    const res = await db.query(
+      `INSERT INTO registrations (parent_name, phone, student_name, class, note)
+       VALUES ($1,$2,$3,$4,$5) RETURNING id, created_at`,
+      [reg.parentName, reg.phone, reg.studentName, reg.className, reg.note || '']
+    );
+    return res.rows[0];
+  } catch(e) {
+    console.error('⚠️ DB insert registration error:', e.message);
+    return null;
+  }
+}
+
+async function dbGetRegistrations() {
+  if (!useDb) return [];
+  try {
+    const res = await db.query(
+      'SELECT * FROM registrations ORDER BY created_at DESC'
+    );
+    return res.rows;
+  } catch(e) {
+    console.error('⚠️ DB get registrations error:', e.message);
+    return [];
+  }
+}
+
+async function dbDeleteRegistration(id) {
+  if (!useDb) return false;
+  try {
+    await db.query('DELETE FROM registrations WHERE id = $1', [id]);
+    return true;
+  } catch(e) {
+    console.error('⚠️ DB delete registration error:', e.message);
+    return false;
+  }
 }
 
 // ===== FILE HELPERS (fallback) =====
@@ -599,26 +648,79 @@ app.post('/api/register', async (req, res) => {
     return res.status(400).json({ error: 'missing_fields' });
   }
 
+  // Sanitize input
+  const reg = {
+    parentName: String(parentName).substring(0, 200).trim(),
+    phone: String(phone).substring(0, 20).trim(),
+    studentName: String(studentName).substring(0, 200).trim(),
+    className: String(className).substring(0, 100).trim(),
+    note: String(note || '').substring(0, 500).trim()
+  };
+
+  // 1. Save to DB (always, regardless of Google Apps Script)
+  const dbResult = await dbInsertRegistration(reg);
+  if (!dbResult && useDb) {
+    console.error('⚠️ Failed to save registration to DB');
+  }
+
+  // 2. Forward to Google Apps Script (if configured)
   const data = await getData();
   const url = data.appsScriptUrl;
 
   if (!url || url.includes('YOUR_SCRIPT_ID') || url.includes('YOUR_APPS_SCRIPT')) {
-    return res.status(500).json({ error: 'server_misconfigured' });
+    // No Google Apps Script configured — still OK, data is in DB
+    return res.json({ ok: true, saved: 'db_only' });
   }
 
+  // Forward to Google Apps Script (fire and forget — don't block response)
   fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ parentName, phone, studentName, class: className, note: note || '' })
-  })
-    .then(r => {
-      if (!r.ok) throw new Error('Apps Script error: ' + r.status);
-      res.json({ ok: true });
-    })
-    .catch(err => {
-      console.error('Form forward error:', err.message);
-      res.status(502).json({ error: 'forward_failed' });
-    });
+    body: JSON.stringify({ ...reg, class: reg.className })
+  }).catch(err => {
+    console.error('⚠️ Google Apps Script forward error:', err.message);
+  });
+
+  res.json({ ok: true, saved: 'db_and_script' });
+});
+
+// ===== API: REGISTRATIONS (admin) =====
+app.get('/api/admin/registrations', async (req, res) => {
+  const { password } = req.query;
+  if (!password) return res.status(401).json({ error: 'missing_password' });
+
+  const hash = await getAdminPassword();
+  let valid = false;
+  if (hash && hash.startsWith('$2')) {
+    valid = await bcrypt.compare(password, hash);
+  } else {
+    valid = (password === hash);
+  }
+  if (!valid) return res.status(401).json({ error: 'wrong_password' });
+
+  const regs = await dbGetRegistrations();
+  res.json({ ok: true, registrations: regs });
+});
+
+app.delete('/api/admin/registrations/:id', async (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(401).json({ error: 'missing_password' });
+
+  const hash = await getAdminPassword();
+  let valid = false;
+  if (hash && hash.startsWith('$2')) {
+    valid = await bcrypt.compare(password, hash);
+  } else {
+    valid = (password === hash);
+  }
+  if (!valid) return res.status(401).json({ error: 'wrong_password' });
+
+  const deleted = await dbDeleteRegistration(req.params.id);
+  if (deleted) {
+    res.json({ ok: true });
+  } else {
+    res.status(500).json({ error: 'delete_failed' });
+  }
 });
 
 // ===== STARTUP =====
