@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — Lớp Văn Hoàn</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .tab-btn.active { background: #2563eb; color: white; }
+    .toggle { position: relative; width: 44px; height: 24px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle .slider { position: absolute; inset: 0; background: #ccc; border-radius: 24px; cursor: pointer; transition: 0.3s; }
+    .toggle .slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+    .toggle input:checked + .slider { background: #22c55e; }
+    .toggle input:checked + .slider::before { transform: translateX(20px); }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="bg-white shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <h1 class="text-xl font-bold text-blue-700">📚 Admin — Lớp Văn Hoàn</h1>
+      <button id="logout-btn" class="text-sm text-gray-500 hover:text-red-600">Đăng xuất</button>
+    </div>
+  </header>
+
+  <!-- ═══ TABS ═══ -->
+  <div class="max-w-6xl mx-auto px-4 mt-6">
+    <div class="flex gap-2">
+      <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="content">📝 Nội dung</button>
+      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="schedule">📅 Lịch học</button>
+      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="registrations">📋 Đăng ký</button>
+    </div>
+  </div>
+
+  <!-- ═══ TAB 1: NỘI DUNG ═══ -->
+  <div id="tab-content" class="max-w-6xl mx-auto px-4 mt-6">
+    <div class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-lg font-bold mb-4">Quản lý Nội dung Trang chủ</h2>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Tiêu đề chính (H1)</label>
+          <input id="f-hero-title" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Khẩu hiệu</label>
+          <input id="f-hero-subtitle" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Số năm kinh nghiệm</label>
+          <input id="f-stat-years" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Số học sinh</label>
+          <input id="f-stat-students" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Điểm đánh giá</label>
+          <input id="f-stat-rating" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Tên giáo viên</label>
+          <input id="f-teacher-name" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium mb-1">Giới thiệu giáo viên</label>
+          <textarea id="f-teacher-bio" rows="3" class="w-full border rounded-lg px-3 py-2 text-sm"></textarea>
+        </div>
+      </div>
+      <div class="mt-4 flex items-center gap-4">
+        <button id="btn-save-content" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition text-sm">
+          💾 Cập nhật trang chủ
+        </button>
+        <span id="msg-content" class="text-sm font-medium"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB 2: LỊCH HỌC ═══ -->
+  <div id="tab-schedule" class="max-w-6xl mx-auto px-4 mt-6 hidden">
+    <div class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-lg font-bold mb-4">Cấu hình Lớp học & Lịch học</h2>
+      <div id="schedule-list" class="space-y-4">
+        <!-- JS render: mỗi row là grid md:grid-cols-7 -->
+      </div>
+      <div class="mt-4 flex items-center gap-4">
+        <button id="btn-save-schedule" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition text-sm">
+          💾 Lưu lịch học
+        </button>
+        <span id="msg-schedule" class="text-sm font-medium"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB 3: ĐĂNG KÝ ═══ -->
+  <div id="tab-registrations" class="max-w-6xl mx-auto px-4 mt-6 hidden">
+    <div class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-lg font-bold mb-4">Danh sách Học sinh Đăng ký</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-gray-50 text-left">
+              <th class="px-3 py-2">#</th>
+              <th class="px-3 py-2">Phụ huynh</th>
+              <th class="px-3 py-2">SĐT</th>
+              <th class="px-3 py-2">Con</th>
+              <th class="px-3 py-2">Lớp</th>
+              <th class="px-3 py-2">Ghi chú</th>
+              <th class="px-3 py-2">Ngày</th>
+              <th class="px-3 py-2">Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody id="registrations-list">
+            <!-- JS render -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>

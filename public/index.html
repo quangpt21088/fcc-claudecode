@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lớp Văn Hoàn</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html { scroll-behavior: smooth; }
+    .fade-in { opacity: 0; transform: translateY(20px); transition: all 0.6s ease; }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- ═══ NAV ═══ -->
+  <nav class="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="#" class="text-xl font-bold text-blue-700">📚 Văn Hoàn</a>
+      <div class="hidden md:flex gap-6 text-sm font-medium">
+        <a href="#hero" class="hover:text-blue-600">Trang chủ</a>
+        <a href="#teacher" class="hover:text-blue-600">Giáo viên</a>
+        <a href="#courses" class="hover:text-blue-600">Lớp học</a>
+        <a href="#register" class="hover:text-blue-600">Đăng ký</a>
+      </div>
+      <a href="#register" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition">
+        Đăng ký ngay
+      </a>
+    </div>
+  </nav>
+
+  <!-- ═══ HERO ═══ -->
+  <section id="hero" class="pt-24 pb-16 bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 text-white">
+    <div class="max-w-6xl mx-auto px-4 text-center fade-in">
+      <h1 id="hero-title" class="text-4xl md:text-5xl font-extrabold mb-4">Lớp Văn Hoàn</h1>
+      <p id="hero-subtitle" class="text-lg md:text-xl text-blue-100 mb-8">Khơi nguồn tư duy — Bứt phá điểm số</p>
+      <div class="flex flex-wrap justify-center gap-8">
+        <div class="bg-white/15 backdrop-blur rounded-xl px-6 py-4">
+          <div id="stat-years" class="text-3xl font-bold">10+</div>
+          <div class="text-blue-200 text-sm">Năm kinh nghiệm</div>
+        </div>
+        <div class="bg-white/15 backdrop-blur rounded-xl px-6 py-4">
+          <div id="stat-students" class="text-3xl font-bold">500+</div>
+          <div class="text-blue-200 text-sm">Học sinh</div>
+        </div>
+        <div class="bg-white/15 backdrop-blur rounded-xl px-6 py-4">
+          <div id="stat-rating" class="text-3xl font-bold">4.9</div>
+          <div class="text-blue-200 text-sm">Điểm đánh giá</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ TEACHER ═══ -->
+  <section id="teacher" class="py-16 bg-white">
+    <div class="max-w-4xl mx-auto px-4 fade-in">
+      <h2 class="text-3xl font-bold text-center mb-8">👨‍🏫 Giáo viên</h2>
+      <div class="flex flex-col md:flex-row items-center gap-8">
+        <div class="w-32 h-32 rounded-full bg-blue-100 flex items-center justify-center text-5xl shrink-0">👨‍🏫</div>
+        <div>
+          <h3 id="teacher-name" class="text-2xl font-bold text-blue-700 mb-2">Thầy/Nguyễn Văn A</h3>
+          <p id="teacher-bio" class="text-gray-600 leading-relaxed">Đang tải...</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ COURSES & SCHEDULE ═══ -->
+  <section id="courses" class="py-16 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-4 fade-in">
+      <h2 class="text-3xl font-bold text-center mb-8">📖 Lớp học & Lịch học</h2>
+      <div id="courses-list" class="grid md:grid-cols-2 gap-6">
+        <!-- JS render -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ REGISTER ═══ -->
+  <section id="register" class="py-16 bg-white">
+    <div class="max-w-xl mx-auto px-4 fade-in">
+      <h2 class="text-3xl font-bold text-center mb-8">📝 Đăng ký học</h2>
+      <form id="register-form" class="bg-gray-50 rounded-2xl p-6 shadow space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Họ tên phụ huynh *</label>
+          <input name="parentName" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Số điện thoại *</label>
+          <input name="phone" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Tên con *</label>
+          <input name="childName" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Lớp học</label>
+          <select name="grade" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <option value="">— Chọn lớp —</option>
+            <option value="6">Lớp 6</option>
+            <option value="7">Lớp 7</option>
+            <option value="8">Lớp 8</option>
+            <option value="9">Lớp 9</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Ghi chú</label>
+          <textarea name="note" rows="2" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+        </div>
+        <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
+          Gửi đăng ký
+        </button>
+        <div id="register-msg" class="text-center text-sm font-medium hidden"></div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="bg-gray-800 text-gray-400 text-center py-6 text-sm">
+    © 2026 Lớp Văn Hoàn. All rights reserved.
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
