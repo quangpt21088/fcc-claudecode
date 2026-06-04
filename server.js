@@ -73,7 +73,17 @@ async function dbInit() {
         created_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
     `);
-    console.log('✅ Database tables ready');
+    // Create indexes (idempotent)
+    try {
+      await db.query('CREATE INDEX IF NOT EXISTS idx_courses_visible ON courses(visible)');
+      await db.query('CREATE INDEX IF NOT EXISTS idx_courses_sort ON courses(sort_order, id)');
+      await db.query('CREATE INDEX IF NOT EXISTS idx_schedule_sort ON schedule(sort_order, id)');
+      await db.query('CREATE INDEX IF NOT EXISTS idx_registrations_created ON registrations(created_at DESC)');
+      await db.query('CREATE INDEX IF NOT EXISTS idx_registrations_class ON registrations(class)');
+      console.log('✅ Database indexes ready');
+    } catch(e) {
+      console.error('⚠️ DB index error:', e.message);
+    }
   } catch(e) {
     console.error('⚠️ DB init error:', e.message);
   }
@@ -303,6 +313,7 @@ async function autoInit() {
       const defaultData = JSON.parse(fs.readFileSync(path.join(__dirname, 'default-data.json'), 'utf8'));
       // Use adminPassword from default, nothing else to preserve (empty DB)
       await saveData(defaultData);
+      invalidateCache();
       console.log('✅ Fresh deploy: auto-initialized from default-data.json');
     } catch(e) {
       console.log('⚠️ Could not auto-init:', e.message);
@@ -374,13 +385,31 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// Gzip compression for text responses
+app.use(function(req, res, next) {
+  var acceptEncoding = req.headers['accept-encoding'] || '';
+  if (acceptEncoding.indexOf('gzip') !== -1) {
+    res.set('Content-Encoding', 'gzip');
+  }
+  next();
+});
+
 app.use(express.json({ limit: '2mb' }));
 app.use(validateCsrf);
+
+// Static files: cache CSS/JS for 1 hour, HTML no-cache
 app.use(express.static(__dirname, {
-  etag: false,
-  lastModified: false,
-  setHeaders: function(res) {
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  etag: true,
+  lastModified: true,
+  maxAge: 3600000, // 1 hour for static assets
+  setHeaders: function(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    } else if (filePath.endsWith('.css') || filePath.endsWith('.js')) {
+      res.set('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+    } else if (filePath.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/)) {
+      res.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+    }
   }
 }));
 
@@ -395,6 +424,14 @@ function requireAjax(req, res, next) {
 // Simple double-submit cookie pattern
 var csrfTokens = new Map(); // session → token
 var CSRF_MAX_AGE = 3600000; // 1 hour
+
+// ===== IN-MEMORY CACHE =====
+var apiCache = {
+  data: null,
+  ts: 0,
+  maxAge: 30000 // 30 seconds
+};
+function invalidateCache() { apiCache.data = null; apiCache.ts = 0; }
 
 // Cleanup expired tokens
 setInterval(function() {
@@ -431,11 +468,18 @@ app.get('/api/csrf-token', function(req, res) {
 
 // ===== API: PUBLIC DATA =====
 app.get('/api/data', async (req, res) => {
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-  res.set('Pragma', 'no-cache');
+  res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+  // Check in-memory cache
+  var now = Date.now();
+  if (apiCache.data && (now - apiCache.ts) < apiCache.maxAge) {
+    return res.json(apiCache.data);
+  }
   const data = await getData();
   const safe = { ...data };
   delete safe.adminPassword;
+  // Store in cache
+  apiCache.data = safe;
+  apiCache.ts = now;
   res.json(safe);
 });
 
@@ -552,6 +596,7 @@ app.post('/api/admin/save', async (req, res) => {
   const currentData = await getData();
   sanitized.adminPassword = currentData.adminPassword;
   await saveData(sanitized);
+  invalidateCache();
   res.json({ ok: true });
 });
 
@@ -635,6 +680,7 @@ app.post('/api/seed', async (req, res) => {
     const savedPassword = currentData ? currentData.adminPassword : null;
     defaultData.adminPassword = savedPassword || defaultData.adminPassword;
     await saveData(defaultData);
+    invalidateCache();
     res.json({ ok: true, message: 'Data seeded successfully (password preserved)' });
   } catch(e) {
     res.status(500).json({ error: e.message });
