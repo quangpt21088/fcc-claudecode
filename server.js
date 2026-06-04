@@ -56,9 +56,9 @@ app.get('/api/content', async (req, res) => {
       'SELECT * FROM courses WHERE hidden = false ORDER BY sort_order ASC'
     );
 
-    // Schedule
+    // Schedule (chỉ hiện hidden=false)
     const { rows: scheduleRows } = await pool.query(
-      'SELECT * FROM schedule ORDER BY sort_order ASC'
+      'SELECT * FROM schedule WHERE hidden = false ORDER BY sort_order ASC'
     );
 
     // Approach
@@ -281,8 +281,8 @@ app.put('/api/admin/schedule', auth, async (req, res) => {
       await client.query('BEGIN');
       for (const s of items) {
         await client.query(
-          `UPDATE schedule SET class_name = $1, time_slot = $2, days = $3, status = $4, status_text = $5, updated_at = NOW() WHERE id = $6`,
-          [s.class_name || s.class, s.time_slot || s.time, s.days, s.status, s.status_text || s.statusText, s.id]
+          `UPDATE schedule SET class_name = $1, time_slot = $2, days = $3, status = $4, status_text = $5, hidden = $6, updated_at = NOW() WHERE id = $7`,
+          [s.class_name || s.class, s.time_slot || s.time, s.days, s.status, s.status_text || s.statusText, s.hidden, s.id]
         );
       }
       await client.query('COMMIT');

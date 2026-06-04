@@ -52,6 +52,7 @@ async function initDB() {
         days VARCHAR(50) NOT NULL DEFAULT '',
         status VARCHAR(20) NOT NULL DEFAULT 'available',
         status_text VARCHAR(50) NOT NULL DEFAULT '🟢 Còn chỗ',
+        hidden BOOLEAN NOT NULL DEFAULT false,
         sort_order INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
@@ -116,6 +117,7 @@ async function initDB() {
     await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS duration VARCHAR(50) NOT NULL DEFAULT '2h/buổi';`);
     await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS max_students VARCHAR(50) NOT NULL DEFAULT 'Tối đa 10';`);
     await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS sessions VARCHAR(50) NOT NULL DEFAULT '2 buổi/tuần';`);
+    await client.query(`ALTER TABLE schedule ADD COLUMN IF NOT EXISTS hidden BOOLEAN NOT NULL DEFAULT false;`);
 
     // ─── Seed Settings ───
     const defaultSettings = [

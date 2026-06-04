@@ -24,6 +24,7 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 const tabBtns = document.querySelectorAll('.tab-btn');
 const tabs = {
   content: document.getElementById('tab-content'),
+  courses: document.getElementById('tab-courses'),
   schedule: document.getElementById('tab-schedule'),
   registrations: document.getElementById('tab-registrations'),
 };
@@ -39,75 +40,148 @@ tabBtns.forEach(btn => {
 
 // ─── Load dữ liệu ────────────────────────────────────────────
 let allCourses = [];
+let allSchedule = [];
 
 async function loadData() {
   try {
-    const res = await API('/api/content');
-    const data = await res.json();
+    // Settings
+    const settingsRes = await API('/api/admin/settings');
+    const S = await settingsRes.json();
 
     // Fill form nội dung
-    if (data.hero) {
-      document.getElementById('f-hero-title').value = data.hero.title || '';
-      document.getElementById('f-hero-subtitle').value = data.hero.subtitle || '';
-      document.getElementById('f-stat-years').value = data.hero.statYears || '';
-      document.getElementById('f-stat-students').value = data.hero.statStudents || '';
-      document.getElementById('f-stat-rating').value = data.hero.statRating || '';
-    }
-    if (data.teacher) {
-      document.getElementById('f-teacher-name').value = data.teacher.name || '';
-      document.getElementById('f-teacher-bio').value = data.teacher.bio || '';
-    }
+    const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val||''; };
+    setVal('f-hero-title', S.hero_title1);
+    setVal('f-hero-subtitle', S.hero_title2);
+    setVal('f-stat-years', S.hero_stat1_value);
+    setVal('f-stat-students', S.hero_stat2_value);
+    setVal('f-stat-rating', S.hero_stat3_value);
+    setVal('f-teacher-name', S.teacher_name);
+    setVal('f-teacher-bio', S.teacher_bio);
 
-    // Render lịch học — dùng API admin để lấy cả khóa ẩn
+    // Courses (tất cả, kể cả ẩn)
     const coursesRes = await API('/api/admin/courses');
-    const coursesData = await coursesRes.json();
-    allCourses = coursesData || [];
-    renderSchedule(allCourses);
+    allCourses = await coursesRes.json() || [];
+    renderCourses(allCourses);
+
+    // Schedule (tất cả, kể cả ẩn)
+    const schedRes = await API('/api/admin/schedule');
+    allSchedule = await schedRes.json() || [];
+    renderScheduleTable(allSchedule);
+
   } catch (err) {
     console.error('Lỗi tải dữ liệu:', err);
   }
 }
 
-// ─── Render lịch học ─────────────────────────────────────────
-function renderSchedule(courses) {
-  const container = document.getElementById('schedule-list');
+function esc(str) {
+  return (str || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ─── Render Courses ───────────────────────────────────────────
+function renderCourses(courses) {
+  const container = document.getElementById('courses-list');
+  if(!container) return;
   container.innerHTML = courses.map((c, i) => `
     <div class="border rounded-lg p-4 grid md:grid-cols-7 gap-3 items-center ${c.hidden ? 'bg-gray-50 opacity-60' : ''}">
       <div>
         <label class="block text-xs text-gray-500 mb-1">Tên lớp</label>
-        <input class="s-name w-full border rounded px-2 py-1 text-sm" value="${esc(c.name)}" data-idx="${i}">
+        <input class="c-name w-full border rounded px-2 py-1 text-sm" value="${esc(c.name)}" data-idx="${i}">
       </div>
       <div>
-        <label class="block text-xs text-gray-500 mb-1">Học phí</label>
-        <input class="s-price w-full border rounded px-2 py-1 text-sm" value="${esc(c.price)}" data-idx="${i}">
+        <label class="block text-xs text-gray-500 mb-1">Tên ngắn</label>
+        <input class="c-short w-full border rounded px-2 py-1 text-sm" value="${esc(c.short_name)}" data-idx="${i}">
       </div>
       <div>
-        <label class="block text-xs text-gray-500 mb-1">Ngày học</label>
-        <input class="s-day w-full border rounded px-2 py-1 text-sm" value="${esc(c.day_of_week)}" data-idx="${i}">
+        <label class="block text-xs text-gray-500 mb-1">Emoji</label>
+        <input class="c-emoji w-full border rounded px-2 py-1 text-sm" value="${esc(c.emoji)}" data-idx="${i}">
       </div>
       <div>
-        <label class="block text-xs text-gray-500 mb-1">Khung giờ</label>
-        <input class="s-time w-full border rounded px-2 py-1 text-sm" value="${esc(c.time_slot)}" data-idx="${i}">
+        <label class="block text-xs text-gray-500 mb-1">Màu</label>
+        <select class="c-color w-full border rounded px-2 py-1 text-sm" data-idx="${i}">
+          <option value="blue" ${c.color==='blue'?'selected':''}>blue</option>
+          <option value="green" ${c.color==='green'?'selected':''}>green</option>
+          <option value="purple" ${c.color==='purple'?'selected':''}>purple</option>
+          <option value="orange" ${c.color==='orange'?'selected':''}>orange</option>
+        </select>
       </div>
       <div class="flex items-center gap-2">
         <label class="toggle">
-          <input type="checkbox" class="s-status" data-idx="${i}" ${c.status === 'available' ? 'checked' : ''}>
+          <input type="checkbox" class="c-status" data-idx="${i}" ${c.status === 'available' ? 'checked' : ''}>
           <span class="slider"></span>
         </label>
-        <span class="text-xs text-gray-500 s-status-label">${c.status === 'available' ? 'Còn chỗ' : 'Hết chỗ'}</span>
+        <span class="text-xs text-gray-500 c-status-label">${c.status === 'available' ? 'Còn chỗ' : 'Hết chỗ'}</span>
       </div>
       <div class="flex items-center gap-2">
         <label class="toggle">
-          <input type="checkbox" class="s-visible" data-idx="${i}" ${!c.hidden ? 'checked' : ''}>
+          <input type="checkbox" class="c-visible" data-idx="${i}" ${!c.hidden ? 'checked' : ''}>
           <span class="slider"></span>
         </label>
-        <span class="text-xs text-gray-500 s-visible-label">${c.hidden ? 'Đang ẩn' : 'Hiển thị'}</span>
+        <span class="text-xs text-gray-500 c-visible-label">${c.hidden ? 'Đang ẩn' : 'Hiển thị'}</span>
       </div>
       <div class="text-xs text-gray-400">ID: ${c.id}</div>
     </div>
   `).join('');
 
-  // Toggle status labels
+  // Toggle status
+  container.querySelectorAll('.c-status').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const label = cb.closest('.flex').querySelector('.c-status-label');
+      label.textContent = cb.checked ? 'Còn chỗ' : 'Hết chỗ';
+    });
+  });
+
+  // Toggle visible
+  container.querySelectorAll('.c-visible').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const label = cb.closest('.flex').querySelector('.c-visible-label');
+      const row = cb.closest('.border');
+      if (cb.checked) {
+        label.textContent = 'Hiển thị';
+        row.classList.remove('bg-gray-50', 'opacity-60');
+      } else {
+        label.textContent = 'Đang ẩn';
+        row.classList.add('bg-gray-50', 'opacity-60');
+      }
+    });
+  });
+}
+
+// ─── Render Schedule ──────────────────────────────────────────
+function renderScheduleTable(items) {
+  const container = document.getElementById('schedule-list');
+  if(!container) return;
+  container.innerHTML = items.map((s, i) => `
+    <div class="border rounded-lg p-4 grid md:grid-cols-6 gap-3 items-center ${s.hidden ? 'bg-gray-50 opacity-60' : ''}">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Lớp</label>
+        <input class="s-class w-full border rounded px-2 py-1 text-sm" value="${esc(s.class_name)}" data-idx="${i}">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Thời gian</label>
+        <input class="s-time w-full border rounded px-2 py-1 text-sm" value="${esc(s.time_slot)}" data-idx="${i}">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Ngày học</label>
+        <input class="s-days w-full border rounded px-2 py-1 text-sm" value="${esc(s.days)}" data-idx="${i}">
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="toggle">
+          <input type="checkbox" class="s-status" data-idx="${i}" ${s.status === 'available' ? 'checked' : ''}>
+          <span class="slider"></span>
+        </label>
+        <span class="text-xs text-gray-500 s-status-label">${s.status === 'available' ? 'Còn chỗ' : 'Hết chỗ'}</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="toggle">
+          <input type="checkbox" class="s-visible" data-idx="${i}" ${!s.hidden ? 'checked' : ''}>
+          <span class="slider"></span>
+        </label>
+        <span class="text-xs text-gray-500 s-visible-label">${s.hidden ? 'Đang ẩn' : 'Hiển thị'}</span>
+      </div>
+      <div class="text-xs text-gray-400">ID: ${s.id}</div>
+    </div>
+  `).join('');
+
   container.querySelectorAll('.s-status').forEach(cb => {
     cb.addEventListener('change', () => {
       const label = cb.closest('.flex').querySelector('.s-status-label');
@@ -115,7 +189,6 @@ function renderSchedule(courses) {
     });
   });
 
-  // Toggle visible labels
   container.querySelectorAll('.s-visible').forEach(cb => {
     cb.addEventListener('change', () => {
       const label = cb.closest('.flex').querySelector('.s-visible-label');
@@ -131,11 +204,7 @@ function renderSchedule(courses) {
   });
 }
 
-function esc(str) {
-  return (str || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-// ─── Lưu nội dung ────────────────────────────────────────────
+// ─── Lưu nội dung (settings) ──────────────────────────────────
 document.getElementById('btn-save-content').addEventListener('click', async () => {
   const msg = document.getElementById('msg-content');
   const btn = document.getElementById('btn-save-content');
@@ -146,17 +215,13 @@ document.getElementById('btn-save-content').addEventListener('click', async () =
     const res = await API('/api/admin/content', {
       method: 'PUT',
       body: JSON.stringify({
-        hero: {
-          title: document.getElementById('f-hero-title').value,
-          subtitle: document.getElementById('f-hero-subtitle').value,
-          statYears: document.getElementById('f-stat-years').value,
-          statStudents: document.getElementById('f-stat-students').value,
-          statRating: document.getElementById('f-stat-rating').value,
-        },
-        teacher: {
-          name: document.getElementById('f-teacher-name').value,
-          bio: document.getElementById('f-teacher-bio').value,
-        },
+        hero_title1: document.getElementById('f-hero-title').value,
+        hero_title2: document.getElementById('f-hero-subtitle').value,
+        hero_stat1_value: document.getElementById('f-stat-years').value,
+        hero_stat2_value: document.getElementById('f-stat-students').value,
+        hero_stat3_value: document.getElementById('f-stat-rating').value,
+        teacher_name: document.getElementById('f-teacher-name').value,
+        teacher_bio: document.getElementById('f-teacher-bio').value,
       }),
     });
     const data = await res.json();
@@ -181,19 +246,61 @@ document.getElementById('btn-save-content').addEventListener('click', async () =
   }
 });
 
-// ─── Lưu lịch học ────────────────────────────────────────────
-document.getElementById('btn-save-schedule').addEventListener('click', async () => {
-  const msg = document.getElementById('msg-schedule');
-  const btn = document.getElementById('btn-save-schedule');
+// ─── Lưu khóa học ────────────────────────────────────────────
+document.getElementById('btn-save-courses')?.addEventListener('click', async () => {
+  const msg = document.getElementById('msg-courses');
+  const btn = document.getElementById('btn-save-courses');
   btn.textContent = 'Đang lưu...';
   btn.disabled = true;
 
   const courses = allCourses.map((c, i) => ({
     id: c.id,
-    name: document.querySelector(`.s-name[data-idx="${i}"]`).value,
-    price: document.querySelector(`.s-price[data-idx="${i}"]`).value,
-    dayOfWeek: document.querySelector(`.s-day[data-idx="${i}"]`).value,
-    timeSlot: document.querySelector(`.s-time[data-idx="${i}"]`).value,
+    name: document.querySelector(`.c-name[data-idx="${i}"]`).value,
+    short_name: document.querySelector(`.c-short[data-idx="${i}"]`).value,
+    emoji: document.querySelector(`.c-emoji[data-idx="${i}"]`).value,
+    color: document.querySelector(`.c-color[data-idx="${i}"]`).value,
+    status: document.querySelector(`.c-status[data-idx="${i}"]`).checked ? 'available' : 'full',
+    hidden: !document.querySelector(`.c-visible[data-idx="${i}"]`).checked,
+  }));
+
+  try {
+    const res = await API('/api/admin/courses', {
+      method: 'PUT',
+      body: JSON.stringify({ courses }),
+    });
+    const data = await res.json();
+    msg.classList.remove('text-red-600', 'text-green-600');
+    if (res.ok) {
+      msg.classList.add('text-green-600');
+      msg.textContent = '✅ ' + (data.message || 'Đã lưu');
+    } else if (res.status === 401) {
+      localStorage.removeItem('admin_token');
+      window.location.href = 'login.html';
+    } else {
+      msg.classList.add('text-red-600');
+      msg.textContent = '❌ ' + (data.error || 'Lưu thất bại');
+    }
+  } catch {
+    msg.classList.add('text-red-600');
+    msg.textContent = '❌ Không thể kết nối server';
+  } finally {
+    btn.textContent = '💾 Lưu khóa học';
+    btn.disabled = false;
+  }
+});
+
+// ─── Lưu lịch học ────────────────────────────────────────────
+document.getElementById('btn-save-schedule')?.addEventListener('click', async () => {
+  const msg = document.getElementById('msg-schedule');
+  const btn = document.getElementById('btn-save-schedule');
+  btn.textContent = 'Đang lưu...';
+  btn.disabled = true;
+
+  const items = allSchedule.map((s, i) => ({
+    id: s.id,
+    class_name: document.querySelector(`.s-class[data-idx="${i}"]`).value,
+    time_slot: document.querySelector(`.s-time[data-idx="${i}"]`).value,
+    days: document.querySelector(`.s-days[data-idx="${i}"]`).value,
     status: document.querySelector(`.s-status[data-idx="${i}"]`).checked ? 'available' : 'full',
     hidden: !document.querySelector(`.s-visible[data-idx="${i}"]`).checked,
   }));
@@ -201,7 +308,7 @@ document.getElementById('btn-save-schedule').addEventListener('click', async () 
   try {
     const res = await API('/api/admin/schedule', {
       method: 'PUT',
-      body: JSON.stringify({ courses }),
+      body: JSON.stringify({ items }),
     });
     const data = await res.json();
     msg.classList.remove('text-red-600', 'text-green-600');
@@ -257,7 +364,6 @@ async function loadRegistrations() {
       </tr>
     `).join('');
 
-    // Bind status toggle
     tbody.querySelectorAll('.status-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const newStatus = btn.dataset.status === 'pending' ? 'contacted' : 'pending';
@@ -292,7 +398,6 @@ function escHtml(str) {
 // ─── Init ─────────────────────────────────────────────────────
 loadData();
 
-// Load registrations khi click tab
 tabBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     if (btn.dataset.tab === 'registrations') loadRegistrations();

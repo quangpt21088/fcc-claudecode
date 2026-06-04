@@ -27,8 +27,9 @@
 
   <!-- ═══ TABS ═══ -->
   <div class="max-w-6xl mx-auto px-4 mt-6">
-    <div class="flex gap-2">
+    <div class="flex gap-2 flex-wrap">
       <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="content">📝 Nội dung</button>
+      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="courses">📚 Khóa học</button>
       <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="schedule">📅 Lịch học</button>
       <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="registrations">📋 Đăng ký</button>
     </div>
@@ -77,12 +78,30 @@
     </div>
   </div>
 
-  <!-- ═══ TAB 2: LỊCH HỌC ═══ -->
+  <!-- ═══ TAB 2: KHÓA HỌC ═══ -->
+  <div id="tab-courses" class="max-w-6xl mx-auto px-4 mt-6 hidden">
+    <div class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-lg font-bold mb-4">Quản lý Khóa học</h2>
+      <p class="text-sm text-gray-500 mb-4">Toggle "Hiển thị" để ẩn/hiện khóa học trên trang chủ. Khóa ẩn = lịch học cũng ẩn.</p>
+      <div id="courses-list" class="space-y-4">
+        <!-- JS render -->
+      </div>
+      <div class="mt-4 flex items-center gap-4">
+        <button id="btn-save-courses" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition text-sm">
+          💾 Lưu khóa học
+        </button>
+        <span id="msg-courses" class="text-sm font-medium"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB 3: LỊCH HỌC ═══ -->
   <div id="tab-schedule" class="max-w-6xl mx-auto px-4 mt-6 hidden">
     <div class="bg-white rounded-xl shadow p-6">
-      <h2 class="text-lg font-bold mb-4">Cấu hình Lớp học & Lịch học</h2>
+      <h2 class="text-lg font-bold mb-4">Cấu hình Lịch học</h2>
+      <p class="text-sm text-gray-500 mb-4">Toggle "Hiển thị" để ẩn/hiện dòng lịch học trên trang chủ.</p>
       <div id="schedule-list" class="space-y-4">
-        <!-- JS render: mỗi row là grid md:grid-cols-7 -->
+        <!-- JS render -->
       </div>
       <div class="mt-4 flex items-center gap-4">
         <button id="btn-save-schedule" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition text-sm">
@@ -93,7 +112,7 @@
     </div>
   </div>
 
-  <!-- ═══ TAB 3: ĐĂNG KÝ ═══ -->
+  <!-- ═══ TAB 4: ĐĂNG KÝ ═══ -->
   <div id="tab-registrations" class="max-w-6xl mx-auto px-4 mt-6 hidden">
     <div class="bg-white rounded-xl shadow p-6">
       <h2 class="text-lg font-bold mb-4">Danh sách Học sinh Đăng ký</h2>
