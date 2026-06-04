@@ -34,6 +34,8 @@
     .float-card { animation:float-card 6s ease-in-out infinite; }
     .modal-backdrop { background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); }
     html { scroll-behavior:smooth; }
+    /* Teacher photo placeholder */
+    .teacher-placeholder { background: linear-gradient(135deg, #4c6ef5 0%, #7c3aed 100%); }
   </style>
 </head>
 <body class="font-sans bg-brand-900 text-gray-100 antialiased">
@@ -101,7 +103,15 @@
         <div class="relative z-10">
           <div class="bg-white/10 backdrop-blur-md rounded-3xl shadow-2xl overflow-hidden border border-white/20">
             <div class="relative">
-              <img id="teacher-photo" src="" alt="Giáo viên Ngữ Văn THCS" class="w-full h-96 object-contain object-center bg-white/5" onerror="this.style.display='none'"/>
+              <!-- Ảnh giáo viên với placeholder -->
+              <div id="teacher-photo-container" class="w-full h-96 teacher-placeholder flex items-center justify-center relative overflow-hidden">
+                <img id="teacher-photo" src="" alt="Giáo viên Ngữ Văn THCS" class="w-full h-full object-cover absolute inset-0" onerror="this.style.display='none'"/>
+                <div id="teacher-photo-placeholder" class="text-center p-8">
+                  <div class="text-8xl mb-4">👨‍🏫</div>
+                  <p class="text-white/60 text-sm">Ảnh giáo viên</p>
+                  <p class="text-white/40 text-xs mt-1">Thêm ảnh trong Admin</p>
+                </div>
+              </div>
               <div class="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/60 to-transparent"></div>
               <div class="absolute inset-x-0 bottom-0 p-5">
                 <div class="flex items-end justify-between">
@@ -241,60 +251,34 @@
 
 <script>
 (function(){
-  // ===== DATA =====
   var DATA = {};
-
   function esc(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
 
-  // ===== LOAD FROM API =====
   function loadData(){
     return fetch('/api/content')
       .then(function(r){ return r.json(); })
-      .then(function(data){
-        DATA = data;
-        return DATA;
-      })
-      .catch(function(err){
-        console.error('Lỗi tải dữ liệu:', err);
-        return null;
-      });
+      .then(function(data){ DATA = data; return DATA; })
+      .catch(function(err){ console.error('Lỗi tải dữ liệu:', err); return null; });
   }
 
-  // ===== RENDER =====
   function renderPage(){
     var d = DATA;
     if(!d) return;
 
-    // Simple text fields
+    // Text fields
     var textMap = {
-      'site-name': d.siteName,
-      'site-name-accent': d.siteNameAccent,
-      'hero-badge': d.heroBadge,
-      'hero-title1': d.heroTitle1,
-      'hero-title2': d.heroTitle2,
-      'hero-desc': d.heroDesc,
-      'hero-stat1-value': d.heroStat1Value,
-      'hero-stat1-label': d.heroStat1Label,
-      'hero-stat2-value': d.heroStat2Value,
-      'hero-stat2-label': d.heroStat2Label,
-      'hero-stat3-value': d.heroStat3Value,
-      'hero-stat3-label': d.heroStat3Label,
-      'teacher-name': d.teacherName,
-      'teacher-label': d.teacherLabel,
-      'teacher-bio': d.teacherBio,
-      'satisfaction-value': d.satisfactionValue,
-      'satisfaction-label': d.satisfactionLabel,
-      'courses-section-title': d.coursesSectionTitle,
-      'courses-section-desc': d.coursesSectionDesc,
-      'schedule-section-title': d.scheduleSectionTitle,
-      'schedule-section-desc': d.scheduleSectionDesc,
-      'form-section-title': d.formSectionTitle,
-      'form-section-desc': d.formSectionDesc,
-      'footer-brand': d.footerBrand,
-      'footer-brand-acent': d.footerBrandAccent,
-      'footer-desc': d.footerDesc,
-      'footer-hotline': d.footerHotline,
-      'footer-address': d.footerAddress,
+      'site-name': d.siteName, 'site-name-accent': d.siteNameAccent,
+      'hero-badge': d.heroBadge, 'hero-title1': d.heroTitle1, 'hero-title2': d.heroTitle2,
+      'hero-desc': d.heroDesc, 'hero-stat1-value': d.heroStat1Value, 'hero-stat1-label': d.heroStat1Label,
+      'hero-stat2-value': d.heroStat2Value, 'hero-stat2-label': d.heroStat2Label,
+      'hero-stat3-value': d.heroStat3Value, 'hero-stat3-label': d.heroStat3Label,
+      'teacher-name': d.teacherName, 'teacher-label': d.teacherLabel, 'teacher-bio': d.teacherBio,
+      'satisfaction-value': d.satisfactionValue, 'satisfaction-label': d.satisfactionLabel,
+      'courses-section-title': d.coursesSectionTitle, 'courses-section-desc': d.coursesSectionDesc,
+      'schedule-section-title': d.scheduleSectionTitle, 'schedule-section-desc': d.scheduleSectionDesc,
+      'form-section-title': d.formSectionTitle, 'form-section-desc': d.formSectionDesc,
+      'footer-brand': d.footerBrand, 'footer-brand-accent': d.footerBrandAccent,
+      'footer-desc': d.footerDesc, 'footer-hotline': d.footerHotline, 'footer-address': d.footerAddress,
     };
     Object.keys(textMap).forEach(function(id){
       var el = document.getElementById(id);
@@ -303,16 +287,21 @@
 
     // Teacher photo
     var tp = document.getElementById('teacher-photo');
-    if(tp && d.teacherPhoto){ tp.src = d.teacherPhoto; tp.style.display='block'; }
-    else if(tp){ tp.style.display='none'; }
+    var placeholder = document.getElementById('teacher-photo-placeholder');
+    if(tp && d.teacherPhoto && d.teacherPhoto.length > 0){
+      tp.src = d.teacherPhoto;
+      tp.style.display = 'block';
+      if(placeholder) placeholder.style.display = 'none';
+    } else {
+      if(tp) tp.style.display = 'none';
+      if(placeholder) placeholder.style.display = 'block';
+    }
 
     // FABs
     var fabZ = document.getElementById('fab-zalo');
     var fabC = document.getElementById('fab-call');
     if(fabZ && d.zaloUrl) fabZ.href = d.zaloUrl;
     if(fabC && d.hotlineNumber) fabC.href = 'tel:' + d.hotlineNumber.replace(/[^\d+]/g,'');
-
-    // Footer map
     var fm = document.getElementById('footer-map');
     if(fm && d.footerMap) fm.src = d.footerMap;
 
@@ -368,7 +357,6 @@
     setTimeout(initReveal, 100);
   }
 
-  // ===== SCROLL REVEAL =====
   function initReveal(){
     var els = document.querySelectorAll('.reveal:not(.visible)');
     var obs = new IntersectionObserver(function(entries){
@@ -383,11 +371,9 @@
     els.forEach(function(el,i){el.dataset.delay=i%4;obs.observe(el);});
   }
 
-  // ===== DOM Ready =====
   document.addEventListener('DOMContentLoaded',function(){
     loadData().then(function(){ renderPage(); });
 
-    // Mobile menu
     var mt = document.getElementById('menu-toggle'), mm = document.getElementById('mobile-menu'), im = document.getElementById('icon-menu'), ic = document.getElementById('icon-close');
     if(mt) mt.addEventListener('click',function(){
       if(mm) mm.classList.toggle('hidden');
@@ -402,7 +388,6 @@
       });
     });
 
-    // Course register button → scroll to form
     var coursesGrid = document.getElementById('courses-grid');
     if(coursesGrid) coursesGrid.addEventListener('click',function(e){
       var btn = e.target.closest('.course-register-btn');
@@ -415,7 +400,6 @@
       if(formSection) formSection.scrollIntoView({behavior:'smooth'});
     });
 
-    // Header shrink
     var ticking = false;
     window.addEventListener('scroll',function(){
       if(!ticking){
@@ -430,7 +414,6 @@
 
     initReveal();
 
-    // Phone input
     var phoneInput = document.querySelector('input[name="phone"]');
     var phoneError = document.getElementById('phone-error');
     if(phoneInput) phoneInput.addEventListener('input',function(e){
@@ -443,7 +426,6 @@
       if(digits.length===10){ phoneError.classList.add('hidden'); phoneInput.classList.remove('border-red-500'); }
     });
 
-    // Form submit
     var form = document.getElementById('register-form');
     var submitBtn = document.getElementById('submit-btn'), btnText = document.getElementById('btn-text'), btnIcon = document.getElementById('btn-icon'), btnSpinner = document.getElementById('btn-spinner');
     var formError = document.getElementById('form-error');

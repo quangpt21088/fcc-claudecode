@@ -7,17 +7,27 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .tab-btn.active { background: #2563eb; color: white; }
-    .toggle { position: relative; width: 44px; height: 24px; }
+    .toggle { position: relative; width: 44px; height: 24px; display: inline-block; }
     .toggle input { opacity: 0; width: 0; height: 0; }
     .toggle .slider { position: absolute; inset: 0; background: #ccc; border-radius: 24px; cursor: pointer; transition: 0.3s; }
     .toggle .slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
     .toggle input:checked + .slider { background: #22c55e; }
     .toggle input:checked + .slider::before { transform: translateX(20px); }
+    .admin-input { width:100%; padding:0.5rem 0.75rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem; outline:none; }
+    .admin-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
+    .admin-label { display:block; font-size:0.75rem; font-weight:600; color:#6b7280; margin-bottom:0.25rem; }
+    .admin-btn { padding:0.5rem 1rem; font-size:0.875rem; font-weight:600; border-radius:0.5rem; border:none; cursor:pointer; transition:all 0.2s; }
+    .admin-btn-primary { background:#2563eb; color:white; }
+    .admin-btn-primary:hover { background:#1d4ed8; }
+    .admin-btn-success { background:#16a34a; color:white; }
+    .admin-btn-success:hover { background:#15803d; }
+    .admin-section { background:#f9fafb; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem; margin-bottom:0.75rem; }
+    .title-style-preview { padding:0.5rem; border:1px dashed #d1d5db; border-radius:0.5rem; margin-top:0.5rem; }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
 
-  <!-- ═══ HEADER ═══ -->
+  <!-- HEADER -->
   <header class="bg-white shadow-sm">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <h1 class="text-xl font-bold text-blue-700">📚 Admin — Lớp Văn Hoàn</h1>
@@ -25,97 +35,284 @@
     </div>
   </header>
 
-  <!-- ═══ TABS ═══ -->
+  <!-- TABS -->
   <div class="max-w-6xl mx-auto px-4 mt-6">
     <div class="flex gap-2 flex-wrap">
       <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="content">📝 Nội dung</button>
+      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="titles">🎨 Tiêu đề</button>
+      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="teacher">👨‍🏫 Giáo viên</button>
       <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="courses">📚 Khóa học</button>
       <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="schedule">📅 Lịch học</button>
       <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="registrations">📋 Đăng ký</button>
     </div>
   </div>
 
-  <!-- ═══ TAB 1: NỘI DUNG ═══ -->
+  <!-- TAB 1: NỘI DUNG -->
   <div id="tab-content" class="max-w-6xl mx-auto px-4 mt-6">
     <div class="bg-white rounded-xl shadow p-6">
       <h2 class="text-lg font-bold mb-4">Quản lý Nội dung Trang chủ</h2>
       <div class="grid md:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium mb-1">Tiêu đề chính (H1)</label>
-          <input id="f-hero-title" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <label class="admin-label">Tiêu đề chính (H1) - Dòng 1</label>
+          <input id="f-hero-title1" class="admin-input">
         </div>
         <div>
-          <label class="block text-sm font-medium mb-1">Khẩu hiệu</label>
-          <input id="f-hero-subtitle" class="w-full border rounded-lg px-3 py-2 text-sm">
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-1">Số năm kinh nghiệm</label>
-          <input id="f-stat-years" class="w-full border rounded-lg px-3 py-2 text-sm">
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-1">Số học sinh</label>
-          <input id="f-stat-students" class="w-full border rounded-lg px-3 py-2 text-sm">
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-1">Điểm đánh giá</label>
-          <input id="f-stat-rating" class="w-full border rounded-lg px-3 py-2 text-sm">
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-1">Tên giáo viên</label>
-          <input id="f-teacher-name" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <label class="admin-label">Tiêu đề chính (H1) - Dòng 2</label>
+          <input id="f-hero-title2" class="admin-input">
         </div>
         <div class="md:col-span-2">
-          <label class="block text-sm font-medium mb-1">Giới thiệu giáo viên</label>
-          <textarea id="f-teacher-bio" rows="3" class="w-full border rounded-lg px-3 py-2 text-sm"></textarea>
+          <label class="admin-label">Mô tả Hero</label>
+          <textarea id="f-hero-desc" rows="2" class="admin-input"></textarea>
+        </div>
+        <div>
+          <label class="admin-label">Badge</label>
+          <input id="f-hero-badge" class="admin-input">
+        </div>
+        <div>
+          <label class="admin-label">Số liệu 1 (Giá trị)</label>
+          <input id="f-stat1-value" class="admin-input">
+        </div>
+        <div>
+          <label class="admin-label">Số liệu 1 (Nhãn)</label>
+          <input id="f-stat1-label" class="admin-input">
+        </div>
+        <div>
+          <label class="admin-label">Số liệu 2 (Giá trị)</label>
+          <input id="f-stat2-value" class="admin-input">
+        </div>
+        <div>
+          <label class="admin-label">Số liệu 2 (Nhãn)</label>
+          <input id="f-stat2-label" class="admin-input">
+        </div>
+        <div>
+          <label class="admin-label">Số liệu 3 (Giá trị)</label>
+          <input id="f-stat3-value" class="admin-input">
+        </div>
+        <div>
+          <label class="admin-label">Số liệu 3 (Nhãn)</label>
+          <input id="f-stat3-label" class="admin-input">
+        </div>
+        <div>
+          <label class="admin-label">Tiêu đề Khóa học</label>
+          <input id="f-courses-title" class="admin-input">
+        </div>
+        <div>
+          <label class="admin-label">Mô tả Khóa học</label>
+          <input id="f-courses-desc" class="admin-input">
+        </div>
+        <div>
+          <label class="admin-label">Tiêu đề Lịch học</label>
+          <input id="f-schedule-title" class="admin-input">
+        </div>
+        <div>
+          <label class="admin-label">Mô tả Lịch học</label>
+          <input id="f-schedule-desc" class="admin-input">
+        </div>
+        <div>
+          <label class="admin-label">Tiêu đề Form</label>
+          <input id="f-form-title" class="admin-input">
+        </div>
+        <div>
+          <label class="admin-label">Mô tả Form</label>
+          <input id="f-form-desc" class="admin-input">
+        </div>
+        <div>
+          <label class="admin-label">Hotline</label>
+          <input id="f-hotline" class="admin-input">
+        </div>
+        <div>
+          <label class="admin-label">Địa chỉ</label>
+          <input id="f-address" class="admin-input">
+        </div>
+        <div class="md:col-span-2">
+          <label class="admin-label">Google Maps URL</label>
+          <input id="f-map" class="admin-input">
         </div>
       </div>
       <div class="mt-4 flex items-center gap-4">
-        <button id="btn-save-content" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition text-sm">
-          💾 Cập nhật trang chủ
-        </button>
+        <button id="btn-save-content" class="admin-btn admin-btn-primary">💾 Lưu nội dung</button>
         <span id="msg-content" class="text-sm font-medium"></span>
       </div>
     </div>
   </div>
 
-  <!-- ═══ TAB 2: KHÓA HỌC ═══ -->
+  <!-- TAB 2: TIÊU ĐỀ (Style Editor) -->
+  <div id="tab-titles" class="max-w-6xl mx-auto px-4 mt-6 hidden">
+    <div class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-lg font-bold mb-2">🎨 Tùy chỉnh Tiêu đề</h2>
+      <p class="text-sm text-gray-500 mb-4">Chọn tiêu đề để chỉnh sửa font, kích thước, màu sắc. Tất cả tiêu đề sử dụng màu trắng làm màu chính.</p>
+
+      <div class="mb-4">
+        <label class="admin-label">Chọn tiêu đề</label>
+        <select id="title-selector" class="admin-input">
+          <option value="hero-title1">Hero - Tiêu đề dòng 1</option>
+          <option value="hero-title2">Hero - Tiêu đề dòng 2</option>
+          <option value="courses-section-title">Khóa học - Tiêu đề</option>
+          <option value="schedule-section-title">Lịch học - Tiêu đề</option>
+          <option value="form-section-title">Form - Tiêu đề</option>
+          <option value="approach-title">Phương pháp - Tiêu đề</option>
+          <option value="why-title">Tại sao - Tiêu đề</option>
+        </select>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-4">
+        <div>
+          <label class="admin-label">Font chữ</label>
+          <select id="title-font" class="admin-input">
+            <option value="Inter">Inter</option>
+            <option value="Arial">Arial</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Verdana">Verdana</option>
+            <option value="Tahoma">Tahoma</option>
+            <option value="system-ui">System UI</option>
+          </select>
+        </div>
+        <div>
+          <label class="admin-label">Kích thước (px)</label>
+          <input id="title-size" type="number" min="12" max="72" value="48" class="admin-input">
+        </div>
+        <div>
+          <label class="admin-label">Độ đậm</label>
+          <select id="title-weight" class="admin-input">
+            <option value="400">Normal</option>
+            <option value="500">Medium</option>
+            <option value="600">Semi Bold</option>
+            <option value="700" selected>Bold</option>
+            <option value="800">Extra Bold</option>
+            <option value="900">Black</option>
+          </select>
+        </div>
+        <div>
+          <label class="admin-label">Màu chữ</label>
+          <div class="flex gap-2 items-center">
+            <input id="title-color" type="color" value="#ffffff" class="w-12 h-10 rounded border cursor-pointer">
+            <input id="title-color-text" value="#ffffff" class="admin-input flex-1">
+          </div>
+        </div>
+        <div>
+          <label class="admin-label">Line Height</label>
+          <select id="title-lineheight" class="admin-input">
+            <option value="1.0">1.0 (Compact)</option>
+            <option value="1.2">1.2 (Normal)</option>
+            <option value="1.4" selected>1.4 (Relaxed)</option>
+            <option value="1.6">1.6 (Loose)</option>
+            <option value="1.8">1.8 (Spacious)</option>
+          </select>
+        </div>
+        <div>
+          <label class="admin-label">Letter Spacing</label>
+          <select id="title-spacing" class="admin-input">
+            <option value="-0.02em">Tight</option>
+            <option value="0em" selected>Normal</option>
+            <option value="0.02em">Wide</option>
+            <option value="0.05em">Wider</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <label class="admin-label">Xem trước</label>
+        <div class="title-style-preview bg-brand-900">
+          <span id="title-preview" class="text-white">Khơi nguồn tư duy</span>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center gap-4">
+        <button id="btn-save-title-style" class="admin-btn admin-btn-primary">💾 Lưa style tiêu đề</button>
+        <button id="btn-reset-title-style" class="admin-btn admin-btn-success">🔄 Reset về mặc định</button>
+        <span id="msg-titles" class="text-sm font-medium"></span>
+      </div>
+
+      <div class="mt-6 border-t pt-4">
+        <h3 class="font-bold text-sm mb-2">Style đã lưu</h3>
+        <div id="saved-styles-list" class="space-y-2 text-sm"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: GIÁO VIÊN -->
+  <div id="tab-teacher" class="max-w-6xl mx-auto px-4 mt-6 hidden">
+    <div class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-lg font-bold mb-4">👨‍🏫 Quản lý Giáo viên</h2>
+
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="admin-label">Tên giáo viên</label>
+          <input id="f-teacher-name" class="admin-input">
+        </div>
+        <div>
+          <label class="admin-label">Nhãn</label>
+          <input id="f-teacher-label" class="admin-input">
+        </div>
+        <div class="md:col-span-2">
+          <label class="admin-label">Giới thiệu</label>
+          <textarea id="f-teacher-bio" rows="3" class="admin-input"></textarea>
+        </div>
+        <div>
+          <label class="admin-label">% Hài lòng</label>
+          <input id="f-satisfaction-value" class="admin-input">
+        </div>
+        <div>
+          <label class="admin-label">Nhãn hài lòng</label>
+          <input id="f-satisfaction-label" class="admin-input">
+        </div>
+      </div>
+
+      <div class="mt-4 admin-section">
+        <h3 class="font-bold text-sm mb-2">📷 Ảnh giáo viên</h3>
+        <p class="text-xs text-gray-500 mb-2">Tải ảnh lên hoặc dán URL ảnh. Hỗ trợ JPG, PNG, WebP.</p>
+        <div class="flex gap-4 items-start">
+          <div class="flex-1">
+            <label class="admin-label">URL ảnh</label>
+            <input id="f-teacher-photo" class="admin-input" placeholder="https://... hoặc data:image/...">
+          </div>
+          <div class="shrink-0">
+            <label class="admin-label">Hoặc upload</label>
+            <input id="f-teacher-photo-file" type="file" accept="image/*" class="admin-input">
+          </div>
+        </div>
+        <div class="mt-2">
+          <img id="teacher-photo-preview" src="" alt="Preview" class="w-32 h-32 object-cover rounded-lg border" style="display:none"/>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center gap-4">
+        <button id="btn-save-teacher" class="admin-btn admin-btn-primary">💾 Lưu giáo viên</button>
+        <span id="msg-teacher" class="text-sm font-medium"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: KHÓA HỌC -->
   <div id="tab-courses" class="max-w-6xl mx-auto px-4 mt-6 hidden">
     <div class="bg-white rounded-xl shadow p-6">
-      <h2 class="text-lg font-bold mb-4">Quản lý Khóa học</h2>
-      <p class="text-sm text-gray-500 mb-4">Toggle "Hiển thị" để ẩn/hiện khóa học trên trang chủ. Khóa ẩn = lịch học cũng ẩn.</p>
-      <div id="courses-list" class="space-y-4">
-        <!-- JS render -->
-      </div>
+      <h2 class="text-lg font-bold mb-2">📚 Quản lý Khóa học</h2>
+      <p class="text-sm text-gray-500 mb-4">Toggle "Hiển thị" để ẩn/hiện khóa học trên trang chủ.</p>
+      <div id="courses-list" class="space-y-4"></div>
       <div class="mt-4 flex items-center gap-4">
-        <button id="btn-save-courses" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition text-sm">
-          💾 Lưu khóa học
-        </button>
+        <button id="btn-save-courses" class="admin-btn admin-btn-primary">💾 Lưu khóa học</button>
         <span id="msg-courses" class="text-sm font-medium"></span>
       </div>
     </div>
   </div>
 
-  <!-- ═══ TAB 3: LỊCH HỌC ═══ -->
+  <!-- TAB 5: LỊCH HỌC -->
   <div id="tab-schedule" class="max-w-6xl mx-auto px-4 mt-6 hidden">
     <div class="bg-white rounded-xl shadow p-6">
-      <h2 class="text-lg font-bold mb-4">Cấu hình Lịch học</h2>
+      <h2 class="text-lg font-bold mb-2">📅 Cấu hình Lịch học</h2>
       <p class="text-sm text-gray-500 mb-4">Toggle "Hiển thị" để ẩn/hiện dòng lịch học trên trang chủ.</p>
-      <div id="schedule-list" class="space-y-4">
-        <!-- JS render -->
-      </div>
+      <div id="schedule-list" class="space-y-4"></div>
       <div class="mt-4 flex items-center gap-4">
-        <button id="btn-save-schedule" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition text-sm">
-          💾 Lưu lịch học
-        </button>
+        <button id="btn-save-schedule" class="admin-btn admin-btn-primary">💾 Lưu lịch học</button>
         <span id="msg-schedule" class="text-sm font-medium"></span>
       </div>
     </div>
   </div>
 
-  <!-- ═══ TAB 4: ĐĂNG KÝ ═══ -->
+  <!-- TAB 6: ĐĂNG KÝ -->
   <div id="tab-registrations" class="max-w-6xl mx-auto px-4 mt-6 hidden">
     <div class="bg-white rounded-xl shadow p-6">
-      <h2 class="text-lg font-bold mb-4">Danh sách Học sinh Đăng ký</h2>
+      <h2 class="text-lg font-bold mb-4">📋 Danh sách Học sinh Đăng ký</h2>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
@@ -130,9 +327,7 @@
               <th class="px-3 py-2">Trạng thái</th>
             </tr>
           </thead>
-          <tbody id="registrations-list">
-            <!-- JS render -->
-          </tbody>
+          <tbody id="registrations-list"></tbody>
         </table>
       </div>
     </div>

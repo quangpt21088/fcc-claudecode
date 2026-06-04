@@ -71,6 +71,13 @@ app.get('/api/content', async (req, res) => {
       'SELECT * FROM why_items ORDER BY sort_order ASC'
     );
 
+    // Title styles
+    let titleStyles = {};
+    try {
+      const { rows: tsRows } = await pool.query("SELECT value FROM settings WHERE key = 'title_styles'");
+      if (tsRows.length > 0) titleStyles = JSON.parse(tsRows[0].value);
+    } catch(e) { titleStyles = {}; }
+
     const data = {
       // Site
       siteName: S.site_name || 'Ngữ Văn',
@@ -159,6 +166,9 @@ app.get('/api/content', async (req, res) => {
         title: w.title || '',
         description: w.description || w.desc || '',
       })),
+
+      // Title styles
+      titleStyles: titleStyles,
     };
 
     contentCache = data;
@@ -376,6 +386,38 @@ app.put('/api/admin/why', auth, async (req, res) => {
     res.json({ ok: true, message: 'Đã cập nhật' });
   } catch (err) {
     console.error('PUT /api/admin/why error:', err.message);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
+// ─── GET /api/admin/title-styles — Lấy style tiêu đề ──────────
+app.get('/api/admin/title-styles', auth, async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT value FROM settings WHERE key = 'title_styles'");
+    if (rows.length > 0) {
+      res.json(JSON.parse(rows[0].value));
+    } else {
+      res.json({});
+    }
+  } catch (err) {
+    console.error('GET /api/admin/title-styles error:', err.message);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
+// ─── PUT /api/admin/title-styles — Lưu style tiêu đề ──────────
+app.put('/api/admin/title-styles', auth, async (req, res) => {
+  try {
+    const styles = req.body;
+    await pool.query(
+      `INSERT INTO settings (key, value) VALUES ('title_styles', $1)
+       ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
+      [JSON.stringify(styles)]
+    );
+    invalidateCache();
+    res.json({ ok: true, message: 'Đã lưu style tiêu đề' });
+  } catch (err) {
+    console.error('PUT /api/admin/title-styles error:', err.message);
     res.status(500).json({ error: 'Lỗi server' });
   }
 });
