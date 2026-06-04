@@ -29,7 +29,7 @@ async function initDB() {
         emoji VARCHAR(10) NOT NULL DEFAULT '📖',
         color VARCHAR(20) NOT NULL DEFAULT 'blue',
         sub VARCHAR(100) NOT NULL DEFAULT '',
-        desc TEXT NOT NULL DEFAULT '',
+        description TEXT NOT NULL DEFAULT '',
         features JSONB DEFAULT '[]',
         duration VARCHAR(50) NOT NULL DEFAULT '2h/buổi',
         max_students VARCHAR(50) NOT NULL DEFAULT 'Tối đa 10',
@@ -63,7 +63,7 @@ async function initDB() {
       CREATE TABLE IF NOT EXISTS approach (
         id SERIAL PRIMARY KEY,
         title VARCHAR(200) NOT NULL DEFAULT '',
-        desc TEXT NOT NULL DEFAULT '',
+        description TEXT NOT NULL DEFAULT '',
         sort_order INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT NOW()
       );
@@ -75,7 +75,7 @@ async function initDB() {
         id SERIAL PRIMARY KEY,
         icon VARCHAR(10) NOT NULL DEFAULT '🏆',
         title VARCHAR(200) NOT NULL DEFAULT '',
-        desc TEXT NOT NULL DEFAULT '',
+        description TEXT NOT NULL DEFAULT '',
         sort_order INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT NOW()
       );
@@ -111,7 +111,7 @@ async function initDB() {
     await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS emoji VARCHAR(10) NOT NULL DEFAULT '📖';`);
     await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS color VARCHAR(20) NOT NULL DEFAULT 'blue';`);
     await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS sub VARCHAR(100) NOT NULL DEFAULT '';`);
-    await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS desc TEXT NOT NULL DEFAULT '';`);
+    await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';`);
     await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS features JSONB DEFAULT '[]';`);
     await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS duration VARCHAR(50) NOT NULL DEFAULT '2h/buổi';`);
     await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS max_students VARCHAR(50) NOT NULL DEFAULT 'Tối đa 10';`);
@@ -166,16 +166,16 @@ async function initDB() {
     const { rows: existingCourses } = await client.query('SELECT COUNT(*) FROM courses');
     if (parseInt(existingCourses[0].count) === 0) {
       const defaultCourses = [
-        { name: 'Ngữ Văn Lớp 6', short_name: 'LỚP 6', emoji: '📖', color: 'blue', sub: 'Nền tảng vững chắc', desc: 'Xây dựng nền tảng ngữ văn vững chắc cho học sinh lớp 6.', features: ['Phân tích văn bản', 'Luyện viết cảm thụ', 'Ôn tập kiểm tra'], duration: '2h/buổi', max_students: 'Tối đa 12', sessions: '2 buổi/tuần', status: 'available', sort_order: 1 },
-        { name: 'Ngữ Văn Lớp 7', short_name: 'LỚP 7', emoji: '✍️', color: 'green', sub: 'Phát triển tư duy', desc: 'Phát triển tư duy phản biện và kỹ năng phân tích văn bản.', features: ['Tư duy phản biện', 'Phân tích tác phẩm', 'Luyện viết nghị luận'], duration: '2h/buổi', max_students: 'Tối đa 12', sessions: '2 buổi/tuần', status: 'available', sort_order: 2 },
-        { name: 'Ngữ Văn Lớp 8', short_name: 'LỚP 8', emoji: '📚', color: 'purple', sub: 'Chuẩn bị bước nhảy', desc: 'Chuẩn bị kiến thức vững vàng cho học sinh lớp 8.', features: ['Văn học dân gian', 'Văn học hiện thực', 'Kỹ năng thi cử'], duration: '2h/buổi', max_students: 'Tối đa 10', sessions: '2 buổi/tuần', status: 'available', sort_order: 3 },
-        { name: 'Ngữ Văn Lớp 9', short_name: 'LỚP 9', emoji: '🎯', color: 'orange', sub: 'Ôn thi tốt nghiệp', desc: 'Ôn tập toàn diện, luyện đề chuyên sâu cho kỳ thi tốt nghiệp THCS.', features: ['Ôn tập toàn diện', 'Luyện đề chuyên sâu', 'Phương pháp làm bài'], duration: '2.5h/buổi', max_students: 'Tối đa 10', sessions: '3 buổi/tuần', status: 'full', sort_order: 4 },
+        { name: 'Ngữ Văn Lớp 6', short_name: 'LỚP 6', emoji: '📖', color: 'blue', sub: 'Nền tảng vững chắc', description: 'Xây dựng nền tảng ngữ văn vững chắc cho học sinh lớp 6.', features: ['Phân tích văn bản', 'Luyện viết cảm thụ', 'Ôn tập kiểm tra'], duration: '2h/buổi', max_students: 'Tối đa 12', sessions: '2 buổi/tuần', status: 'available', sort_order: 1 },
+        { name: 'Ngữ Văn Lớp 7', short_name: 'LỚP 7', emoji: '✍️', color: 'green', sub: 'Phát triển tư duy', description: 'Phát triển tư duy phản biện và kỹ năng phân tích văn bản.', features: ['Tư duy phản biện', 'Phân tích tác phẩm', 'Luyện viết nghị luận'], duration: '2h/buổi', max_students: 'Tối đa 12', sessions: '2 buổi/tuần', status: 'available', sort_order: 2 },
+        { name: 'Ngữ Văn Lớp 8', short_name: 'LỚP 8', emoji: '📚', color: 'purple', sub: 'Chuẩn bị bước nhảy', description: 'Chuẩn bị kiến thức vững vàng cho học sinh lớp 8.', features: ['Văn học dân gian', 'Văn học hiện thực', 'Kỹ năng thi cử'], duration: '2h/buổi', max_students: 'Tối đa 10', sessions: '2 buổi/tuần', status: 'available', sort_order: 3 },
+        { name: 'Ngữ Văn Lớp 9', short_name: 'LỚP 9', emoji: '🎯', color: 'orange', sub: 'Ôn thi tốt nghiệp', description: 'Ôn tập toàn diện, luyện đề chuyên sâu cho kỳ thi tốt nghiệp THCS.', features: ['Ôn tập toàn diện', 'Luyện đề chuyên sâu', 'Phương pháp làm bài'], duration: '2.5h/buổi', max_students: 'Tối đa 10', sessions: '3 buổi/tuần', status: 'full', sort_order: 4 },
       ];
       for (const c of defaultCourses) {
         await client.query(
-          `INSERT INTO courses (name, short_name, emoji, color, sub, desc, features, duration, max_students, sessions, status, sort_order)
+          `INSERT INTO courses (name, short_name, emoji, color, sub, description, features, duration, max_students, sessions, status, sort_order)
            VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12)`,
-          [c.name, c.short_name, c.emoji, c.color, c.sub, c.desc, JSON.stringify(c.features), c.duration, c.max_students, c.sessions, c.status, c.sort_order]
+          [c.name, c.short_name, c.emoji, c.color, c.sub, c.description, JSON.stringify(c.features), c.duration, c.max_students, c.sessions, c.status, c.sort_order]
         );
       }
     }
@@ -203,14 +203,14 @@ async function initDB() {
     const { rows: existingApproach } = await client.query('SELECT COUNT(*) FROM approach');
     if (parseInt(existingApproach[0].count) === 0) {
       const defaultApproach = [
-        { title: 'Phương pháp Socratic', desc: 'Đặt câu hỏi dẫn dắt để học sinh tự khám phá ý nghĩa văn bản.', sort_order: 1 },
-        { title: 'Học qua dự án', desc: 'Học sinh thực hành qua các dự án sáng tạo.', sort_order: 2 },
-        { title: 'Cá nhân hóa lộ trình', desc: 'Mỗi học sinh có lộ trình học tập riêng theo trình độ.', sort_order: 3 },
+        { title: 'Phương pháp Socratic', description: 'Đặt câu hỏi dẫn dắt để học sinh tự khám phá ý nghĩa văn bản.', sort_order: 1 },
+        { title: 'Học qua dự án', description: 'Học sinh thực hành qua các dự án sáng tạo.', sort_order: 2 },
+        { title: 'Cá nhân hóa lộ trình', description: 'Mỗi học sinh có lộ trình học tập riêng theo trình độ.', sort_order: 3 },
       ];
       for (const a of defaultApproach) {
         await client.query(
-          `INSERT INTO approach (title, desc, sort_order) VALUES ($1, $2, $3)`,
-          [a.title, a.desc, a.sort_order]
+          `INSERT INTO approach (title, description, sort_order) VALUES ($1, $2, $3)`,
+          [a.title, a.description, a.sort_order]
         );
       }
     }
@@ -219,15 +219,15 @@ async function initDB() {
     const { rows: existingWhy } = await client.query('SELECT COUNT(*) FROM why_items');
     if (parseInt(existingWhy[0].count) === 0) {
       const defaultWhy = [
-        { icon: '🏆', title: '10+ năm kinh nghiệm', desc: 'Đội ngũ giáo viên giàu kinh nghiệm, tận tâm.', sort_order: 1 },
-        { icon: '📈', title: '98% học sinh tiến bộ', desc: 'Học sinh đạt kết quả cao trong các kỳ thi.', sort_order: 2 },
-        { icon: '👨‍👩‍👧', title: 'Phụ huynh tin tưởng', desc: 'Cập nhật tiến độ học tập thường xuyên.', sort_order: 3 },
-        { icon: '💡', title: 'Phương pháp hiện đại', desc: 'Giảng dạy sinh động, gần gũi, dễ hiểu.', sort_order: 4 },
+        { icon: '🏆', title: '10+ năm kinh nghiệm', description: 'Đội ngũ giáo viên giàu kinh nghiệm, tận tâm.', sort_order: 1 },
+        { icon: '📈', title: '98% học sinh tiến bộ', description: 'Học sinh đạt kết quả cao trong các kỳ thi.', sort_order: 2 },
+        { icon: '👨‍👩‍👧', title: 'Phụ huynh tin tưởng', description: 'Cập nhật tiến độ học tập thường xuyên.', sort_order: 3 },
+        { icon: '💡', title: 'Phương pháp hiện đại', description: 'Giảng dạy sinh động, gần gũi, dễ hiểu.', sort_order: 4 },
       ];
       for (const w of defaultWhy) {
         await client.query(
-          `INSERT INTO why_items (icon, title, desc, sort_order) VALUES ($1, $2, $3, $4)`,
-          [w.icon, w.title, w.desc, w.sort_order]
+          `INSERT INTO why_items (icon, title, description, sort_order) VALUES ($1, $2, $3, $4)`,
+          [w.icon, w.title, w.description, w.sort_order]
         );
       }
     }

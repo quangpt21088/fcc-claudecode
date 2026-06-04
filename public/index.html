@@ -329,7 +329,7 @@
         var col = colors[c.color]||colors.blue;
         var featuresHtml = '';
         if(c.features) featuresHtml = '<ul class="mt-2 space-y-0.5">'+c.features.map(function(f){return '<li class="text-xs text-gray-400 flex items-center gap-1"><span class="text-green-500 font-bold">✓</span> '+esc(f)+'</li>';}).join('')+'</ul>';
-        return '<div class="reveal group bg-gradient-to-br '+col.g+' rounded-2xl p-6 border '+col.b+' hover:scale-[1.02] transition-all duration-300 hover:shadow-xl '+col.s+' flex flex-col h-full"><div class="w-12 h-12 rounded-xl '+col.icon+' flex items-center justify-center text-2xl mb-4">'+c.emoji+'</div><div class="inline-flex px-3 py-1 '+col.badge+' text-xs font-bold rounded-full mb-3 w-fit">'+c.shortName+'</div><h3 class="text-xl font-bold text-white mb-1">'+esc(c.name)+'</h3>'+(c.sub?'<p class="text-xs font-medium text-gray-400 mb-1">'+esc(c.sub)+'</p>':'')+'<p class="text-sm text-gray-400 mb-3">'+esc(c.desc)+'</p>'+featuresHtml+'<div class="flex items-center gap-4 text-xs text-gray-400 border-t '+col.b+' pt-3 mt-3"><span class="flex items-center gap-1">🕐 '+esc(c.duration)+'</span><span class="flex items-center gap-1">👥 '+esc(c.maxStudents)+'</span><span class="flex items-center gap-1">📅 '+esc(c.sessions)+'</span></div><div class="mt-auto pt-4"><button class="course-register-btn w-full py-2.5 bg-gradient-to-r from-brand-600 to-purple-600 text-white text-sm font-semibold rounded-xl hover:shadow-lg hover:shadow-brand-600/30 transition-all hover:-translate-y-0.5" data-course-idx="'+i+'">Đăng ký ngay</button></div></div>';
+        return '<div class="reveal group bg-gradient-to-br '+col.g+' rounded-2xl p-6 border '+col.b+' hover:scale-[1.02] transition-all duration-300 hover:shadow-xl '+col.s+' flex flex-col h-full"><div class="w-12 h-12 rounded-xl '+col.icon+' flex items-center justify-center text-2xl mb-4">'+c.emoji+'</div><div class="inline-flex px-3 py-1 '+col.badge+' text-xs font-bold rounded-full mb-3 w-fit">'+c.shortName+'</div><h3 class="text-xl font-bold text-white mb-1">'+esc(c.name)+'</h3>'+(c.sub?'<p class="text-xs font-medium text-gray-400 mb-1">'+esc(c.sub)+'</p>':'')+'<p class="text-sm text-gray-400 mb-3">'+esc(c.description)+'</p>'+featuresHtml+'<div class="flex items-center gap-4 text-xs text-gray-400 border-t '+col.b+' pt-3 mt-3"><span class="flex items-center gap-1">🕐 '+esc(c.duration)+'</span><span class="flex items-center gap-1">👥 '+esc(c.maxStudents)+'</span><span class="flex items-center gap-1">📅 '+esc(c.sessions)+'</span></div><div class="mt-auto pt-4"><button class="course-register-btn w-full py-2.5 bg-gradient-to-r from-brand-600 to-purple-600 text-white text-sm font-semibold rounded-xl hover:shadow-lg hover:shadow-brand-600/30 transition-all hover:-translate-y-0.5" data-course-idx="'+i+'">Đăng ký ngay</button></div></div>';
       }).join('');
     }
 
@@ -347,7 +347,7 @@
     var agrid = document.getElementById('approach-grid');
     if(agrid && d.approach){
       agrid.innerHTML = d.approach.map(function(a){
-        return '<div class="reveal bg-white/5 rounded-2xl p-8 border border-white/10 hover:shadow-lg transition-all"><div class="w-4 h-4 rounded-full bg-brand-500 mb-4"></div><h4 class="text-lg font-bold text-white mb-3">'+esc(a.title)+'</h4><p class="text-gray-400 text-sm leading-relaxed">'+esc(a.desc)+'</p></div>';
+        return '<div class="reveal bg-white/5 rounded-2xl p-8 border border-white/10 hover:shadow-lg transition-all"><div class="w-4 h-4 rounded-full bg-brand-500 mb-4"></div><h4 class="text-lg font-bold text-white mb-3">'+esc(a.title)+'</h4><p class="text-gray-400 text-sm leading-relaxed">'+esc(a.description)+'</p></div>';
       }).join('');
     }
 
@@ -355,7 +355,7 @@
     var whygrid = document.getElementById('why-grid');
     if(whygrid && d.why){
       whygrid.innerHTML = d.why.map(function(w){
-        return '<div class="reveal text-center p-6 rounded-2xl bg-white/5 border border-white/10"><div class="text-3xl mb-4">'+esc(w.icon)+'</div><h4 class="text-white font-bold text-sm mb-2">'+esc(w.title)+'</h4><p class="text-gray-400 text-xs">'+esc(w.desc)+'</p></div>';
+        return '<div class="reveal text-center p-6 rounded-2xl bg-white/5 border border-white/10"><div class="text-3xl mb-4">'+esc(w.icon)+'</div><h4 class="text-white font-bold text-sm mb-2">'+esc(w.title)+'</h4><p class="text-gray-400 text-xs">'+esc(w.description)+'</p></div>';
       }).join('');
     }
 

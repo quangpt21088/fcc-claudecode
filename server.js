@@ -129,7 +129,7 @@ app.get('/api/content', async (req, res) => {
         emoji: c.emoji || '📖',
         color: c.color || 'blue',
         sub: c.sub || '',
-        desc: c.desc || '',
+        description: c.description || '',
         features: c.features ? (Array.isArray(c.features) ? c.features : JSON.parse(c.features)) : [],
         duration: c.duration || '2h/buổi',
         maxStudents: c.max_students || 'Tối đa 10',
@@ -150,14 +150,14 @@ app.get('/api/content', async (req, res) => {
       approach: approachRows.map(a => ({
         id: a.id,
         title: a.title || '',
-        desc: a.desc || '',
+        description: a.description || a.desc || '',
       })),
 
       why: whyRows.map(w => ({
         id: w.id,
         icon: w.icon || '🏆',
         title: w.title || '',
-        desc: w.desc || '',
+        description: w.description || w.desc || '',
       })),
     };
 
@@ -321,8 +321,8 @@ app.put('/api/admin/approach', auth, async (req, res) => {
       await client.query('BEGIN');
       for (const a of items) {
         await client.query(
-          `UPDATE approach SET title = $1, desc = $2, updated_at = NOW() WHERE id = $3`,
-          [a.title, a.desc, a.id]
+          `UPDATE approach SET title = $1, description = $2, updated_at = NOW() WHERE id = $3`,
+          [a.title, a.description || a.desc, a.id]
         );
       }
       await client.query('COMMIT');
@@ -361,8 +361,8 @@ app.put('/api/admin/why', auth, async (req, res) => {
       await client.query('BEGIN');
       for (const w of items) {
         await client.query(
-          `UPDATE why_items SET icon = $1, title = $2, desc = $3, updated_at = NOW() WHERE id = $4`,
-          [w.icon, w.title, w.desc, w.id]
+          `UPDATE why_items SET icon = $1, title = $2, description = $3, updated_at = NOW() WHERE id = $4`,
+          [w.icon, w.title, w.description || w.desc, w.id]
         );
       }
       await client.query('COMMIT');
@@ -399,7 +399,7 @@ app.put('/api/admin/courses', auth, async (req, res) => {
             duration = $8, max_students = $9, sessions = $10,
             price = $11, status = $12, hidden = $13, updated_at = NOW()
            WHERE id = $14`,
-          [c.name, c.short_name || c.shortName, c.emoji, c.color, c.sub, c.desc,
+          [c.name, c.short_name || c.shortName, c.emoji, c.color, c.sub, c.description || c.desc,
            JSON.stringify(c.features || []), c.duration, c.max_students || c.maxStudents,
            c.sessions, c.price, c.status, c.hidden, c.id]
         );
