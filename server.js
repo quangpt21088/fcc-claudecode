@@ -385,14 +385,8 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Gzip compression for text responses
-app.use(function(req, res, next) {
-  var acceptEncoding = req.headers['accept-encoding'] || '';
-  if (acceptEncoding.indexOf('gzip') !== -1) {
-    res.set('Content-Encoding', 'gzip');
-  }
-  next();
-});
+// ===== MIDDLEWARE =====
+// Note: Railway handles gzip compression at edge, so we don't need express gzip
 
 app.use(express.json({ limit: '2mb' }));
 app.use(validateCsrf);
