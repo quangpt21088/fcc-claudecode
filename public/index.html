@@ -44,7 +44,10 @@
 <header id="header" class="fixed top-0 left-0 right-0 z-50 bg-brand-900/90 backdrop-blur-sm transition-all duration-300 py-4 border-b border-brand-700/50">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
     <a href="#" class="flex items-center gap-2">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-600 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-brand-600/30">N</div>
+      <div id="logo-container" class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-600 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-brand-600/30 overflow-hidden">
+        <img id="logo-img" src="" alt="Logo" class="w-full h-full object-cover" style="display:none"/>
+        <span id="logo-fallback">N</span>
+      </div>
       <span class="text-xl font-bold tracking-tight text-white"><span id="site-name">Ngữ Văn</span><span class="text-brand-400" id="site-name-accent"> THCS</span></span>
     </a>
     <nav class="hidden md:flex items-center gap-8">
@@ -276,6 +279,7 @@
       'satisfaction-value': d.satisfactionValue, 'satisfaction-label': d.satisfactionLabel,
       'courses-section-title': d.coursesSectionTitle, 'courses-section-desc': d.coursesSectionDesc,
       'schedule-section-title': d.scheduleSectionTitle, 'schedule-section-desc': d.scheduleSectionDesc,
+      'approach-title': d.approachTitle, 'why-title': d.whyTitle,
       'form-section-title': d.formSectionTitle, 'form-section-desc': d.formSectionDesc,
       'footer-brand': d.footerBrand, 'footer-brand-accent': d.footerBrandAccent,
       'footer-desc': d.footerDesc, 'footer-hotline': d.footerHotline, 'footer-address': d.footerAddress,
@@ -295,6 +299,18 @@
     } else {
       if(tp) tp.style.display = 'none';
       if(placeholder) placeholder.style.display = 'block';
+    }
+
+    // Logo
+    var logoImg = document.getElementById('logo-img');
+    var logoFallback = document.getElementById('logo-fallback');
+    if (logoImg && d.logoUrl && d.logoUrl.length > 0) {
+      logoImg.src = d.logoUrl;
+      logoImg.style.display = 'block';
+      if (logoFallback) logoFallback.style.display = 'none';
+    } else {
+      if (logoImg) logoImg.style.display = 'none';
+      if (logoFallback) logoFallback.style.display = 'block';
     }
 
     // FABs

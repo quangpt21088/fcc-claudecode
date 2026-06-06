@@ -26,14 +26,14 @@ function sanitizeStr(val) {
 
 // Whitelist of allowed settings keys to prevent DB pollution
 const ALLOWED_SETTINGS_KEYS = new Set([
-  'site_name','site_name_accent','hero_badge','hero_title1','hero_title2','hero_desc',
+  'logo_url','site_name','site_name_accent','hero_badge','hero_title1','hero_title2','hero_desc',
   'hero_stat1_value','hero_stat1_label','hero_stat2_value','hero_stat2_label',
   'hero_stat3_value','hero_stat3_label','teacher_name','teacher_label','teacher_photo',
   'teacher_photo_alt','teacher_bio','satisfaction_value','satisfaction_label',
   'courses_section_title','courses_section_desc','schedule_section_title','schedule_section_desc',
   'form_section_title','form_section_desc','footer_brand','footer_brand_accent',
   'footer_desc','footer_hotline','footer_address','footer_map','zalo_url','hotline_number',
-  'title_styles',
+  'approach_title','why_title','title_styles',
 ]);
 
 // ─── Trust proxy (Railway/reverse proxy) ───
@@ -147,6 +147,12 @@ app.get('/api/content', async (req, res) => {
       scheduleSectionTitle: S.schedule_section_title || 'Lịch học tuần này',
       scheduleSectionDesc: S.schedule_section_desc || '',
 
+      // Approach section
+      approachTitle: S.approach_title || 'Chương Trình Học',
+
+      // Why section
+      whyTitle: S.why_title || 'Tại Sao Phụ Huynh Tin Tưởng?',
+
       // Form
       formSectionTitle: S.form_section_title || 'Đăng ký ngay hôm nay',
       formSectionDesc: S.form_section_desc || 'Điền thông tin bên dưới, chúng tôi sẽ liên hệ trong 24h',
@@ -161,7 +167,10 @@ app.get('/api/content', async (req, res) => {
 
       // FABs
       zaloUrl: S.zalo_url || '#',
-      hotlineNumber: S.hotline_number || '+84123456789',
+      hotlineNumber: S.hotline_number || '+841****6789',
+
+      // Logo
+      logoUrl: S.logo_url || '',
 
       // Data arrays
       courses: coursesRows.map(c => ({
