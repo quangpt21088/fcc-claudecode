@@ -1,6 +1,5 @@
 node_modules/
 .env
-dist/
+*.backup
 .DS_Store
-data.json
-*.log
+Thumbs.db

@@ -33,12 +33,32 @@ tabBtns.forEach(btn => {
   });
 });
 
-// ─── Load dữ liệu ────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────
+function esc(s){ return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+
+function checkAuth(res) {
+  if (res.status === 401) {
+    localStorage.removeItem('admin_token');
+    window.location.href = 'login.html';
+    return true;
+  }
+  return false;
+}
+
+function showMsg(el, text, isError) {
+  el.classList.remove('text-red-600','text-green-600');
+  el.classList.add(isError ? 'text-red-600' : 'text-green-600');
+  el.textContent = text;
+}
+
+// ─── State ────────────────────────────────────────────────────
 let allCourses = [];
 let allSchedule = [];
 let allSettings = {};
 let titleStyles = {};
 
+// ─── Load dữ liệu ────────────────────────────────────────────
 async function loadData() {
   try {
     const settingsRes = await API('/api/admin/settings');
@@ -71,22 +91,21 @@ async function loadData() {
     setVal('f-satisfaction-label', allSettings.satisfaction_label);
     setVal('f-teacher-photo', allSettings.teacher_photo);
 
-    // Teacher photo preview
     const photoPreview = document.getElementById('teacher-photo-preview');
     if(photoPreview && allSettings.teacher_photo){
       photoPreview.src = allSettings.teacher_photo;
       photoPreview.style.display = 'block';
     }
 
-    // Courses
+    // Load courses
     const coursesRes = await API('/api/admin/courses');
     allCourses = await coursesRes.json() || [];
-    renderCourses(allCourses);
+    renderCourses();
 
-    // Schedule
+    // Load schedule
     const schedRes = await API('/api/admin/schedule');
     allSchedule = await schedRes.json() || [];
-    renderScheduleTable(allSchedule);
+    renderSchedule();
 
     // Title styles
     try {
@@ -99,105 +118,378 @@ async function loadData() {
   } catch (err) { console.error('Lỗi tải dữ liệu:', err); }
 }
 
-function esc(s){ return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function escHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+// ═══════════════════════════════════════════════════════════════
+//  COURSES CRUD
+// ═══════════════════════════════════════════════════════════════
 
-// ─── Render Courses ───────────────────────────────────────────
-function renderCourses(courses) {
+function renderCourses() {
   const container = document.getElementById('courses-list');
   if(!container) return;
-  container.innerHTML = courses.map((c, i) => `
-    <div class="border rounded-lg p-4 grid md:grid-cols-7 gap-3 items-center ${c.hidden ? 'bg-gray-50 opacity-60' : ''}">
-      <div>
-        <label class="block text-xs text-gray-500 mb-1">Tên lớp</label>
-        <input class="c-name w-full border rounded px-2 py-1 text-sm" value="${esc(c.name)}" data-idx="${i}">
-      </div>
-      <div>
-        <label class="block text-xs text-gray-500 mb-1">Tên ngắn</label>
-        <input class="c-short w-full border rounded px-2 py-1 text-sm" value="${esc(c.short_name)}" data-idx="${i}">
-      </div>
-      <div>
-        <label class="block text-xs text-gray-500 mb-1">Emoji</label>
-        <input class="c-emoji w-full border rounded px-2 py-1 text-sm" value="${esc(c.emoji||'📖')}" data-idx="${i}">
-      </div>
-      <div>
-        <label class="block text-xs text-gray-500 mb-1">Màu</label>
-        <select class="c-color w-full border rounded px-2 py-1 text-sm" data-idx="${i}">
-          <option value="blue" ${c.color==='blue'?'selected':''}>blue</option>
-          <option value="green" ${c.color==='green'?'selected':''}>green</option>
-          <option value="purple" ${c.color==='purple'?'selected':''}>purple</option>
-          <option value="orange" ${c.color==='orange'?'selected':''}>orange</option>
-        </select>
-      </div>
-      <div class="flex items-center gap-2">
-        <label class="toggle"><input type="checkbox" class="c-status" data-idx="${i}" ${c.status==='available'?'checked':''}><span class="slider"></span></label>
-        <span class="text-xs text-gray-500 c-status-label">${c.status==='available'?'Còn chỗ':'Hết chỗ'}</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <label class="toggle"><input type="checkbox" class="c-visible" data-idx="${i}" ${!c.hidden?'checked':''}><span class="slider"></span></label>
-        <span class="text-xs text-gray-500 c-visible-label">${c.hidden?'Đang ẩn':'Hiển thị'}</span>
-      </div>
-      <div class="text-xs text-gray-400">ID: ${c.id}</div>
-    </div>
-  `).join('');
 
-  container.querySelectorAll('.c-status').forEach(cb => {
-    cb.addEventListener('change', () => { cb.closest('.flex').querySelector('.c-status-label').textContent = cb.checked ? 'Còn chỗ' : 'Hết chỗ'; });
+  if(allCourses.length === 0){
+    container.innerHTML = '<p class="text-gray-400 text-sm text-center py-8">Chưa có khóa học nào. Nhấn "Thêm khóa học" để tạo.</p>';
+    return;
+  }
+
+  container.innerHTML = allCourses.map((c) => {
+    const hiddenClass = c.hidden ? 'bg-gray-50 opacity-60' : '';
+    const statusBadge = c.status === 'available'
+      ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Còn chỗ</span>'
+      : '<span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded-full">Hết chỗ</span>';
+    const hiddenBadge = c.hidden
+      ? '<span class="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs font-semibold rounded-full">Đang ẩn</span>'
+      : '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">Hiển thị</span>';
+
+    // Count schedules for this course
+    const schedCount = allSchedule.filter(s => s.course_id === c.id).length;
+
+    return `
+    <div class="border rounded-lg p-4 ${hiddenClass}" data-course-id="${c.id}">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-lg">${esc(c.emoji||'📖')}</span>
+            <span class="font-bold text-gray-800 truncate">${esc(c.name)}</span>
+            ${statusBadge}
+            ${hiddenBadge}
+          </div>
+          <div class="flex items-center gap-3 text-xs text-gray-500">
+            <span>${esc(c.short_name||'')}</span>
+            <span>🎨 ${c.color||'blue'}</span>
+            <span>🕐 ${esc(c.duration||'')}</span>
+            <span>👥 ${esc(c.max_students||'')}</span>
+            <span>📅 ${schedCount} lịch học</span>
+          </div>
+          ${c.sub ? `<p class="text-xs text-gray-400 mt-0.5">${esc(c.sub)}</p>` : ''}
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <button class="btn-edit-course px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100" data-id="${c.id}">✏️ Sửa</button>
+          <button class="btn-del-course px-2 py-1 text-xs bg-red-50 text-red-600 rounded hover:bg-red-100" data-id="${c.id}">🗑️ Xóa</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Bind events
+  container.querySelectorAll('.btn-edit-course').forEach(btn => {
+    btn.addEventListener('click', () => openCourseModal(parseInt(btn.dataset.id)));
   });
-  container.querySelectorAll('.c-visible').forEach(cb => {
-    cb.addEventListener('change', () => {
-      const label = cb.closest('.flex').querySelector('.c-visible-label');
-      const row = cb.closest('.border');
-      if(cb.checked){ label.textContent='Hiển thị'; row.classList.remove('bg-gray-50','opacity-60'); }
-      else { label.textContent='Đang ẩn'; row.classList.add('bg-gray-50','opacity-60'); }
-    });
+  container.querySelectorAll('.btn-del-course').forEach(btn => {
+    btn.addEventListener('click', () => deleteCourse(parseInt(btn.dataset.id)));
   });
 }
 
-// ─── Render Schedule ──────────────────────────────────────────
-function renderScheduleTable(items) {
+// ─── Course Modal ─────────────────────────────────────────────
+function openCourseModal(courseId) {
+  const modal = document.getElementById('modal-course');
+  const title = document.getElementById('modal-course-title');
+  const isEdit = !!courseId;
+  title.textContent = isEdit ? 'Sửa khóa học' : 'Thêm khóa học';
+
+  if(isEdit) {
+    const c = allCourses.find(x => x.id === courseId);
+    if(!c) return;
+    document.getElementById('course-form-id').value = c.id;
+    document.getElementById('course-form-name').value = c.name || '';
+    document.getElementById('course-form-short').value = c.short_name || '';
+    document.getElementById('course-form-emoji').value = c.emoji || '📖';
+    document.getElementById('course-form-color').value = c.color || 'blue';
+    document.getElementById('course-form-sub').value = c.sub || '';
+    document.getElementById('course-form-desc').value = c.description || '';
+    const features = Array.isArray(c.features) ? c.features.join('\n') : '';
+    document.getElementById('course-form-features').value = features;
+    document.getElementById('course-form-duration').value = c.duration || '2h/buổi';
+    document.getElementById('course-form-max').value = c.max_students || 'Tối đa 10';
+    document.getElementById('course-form-sessions').value = c.sessions || '2 buổi/tuần';
+    document.getElementById('course-form-price').value = c.price || '';
+    document.getElementById('course-form-status').value = c.status || 'available';
+    document.getElementById('course-form-hidden').checked = !!c.hidden;
+    document.getElementById('course-form-sort').value = c.sort_order || 0;
+  } else {
+    document.getElementById('course-form-id').value = '';
+    document.getElementById('course-form-name').value = '';
+    document.getElementById('course-form-short').value = '';
+    document.getElementById('course-form-emoji').value = '📖';
+    document.getElementById('course-form-color').value = 'blue';
+    document.getElementById('course-form-sub').value = '';
+    document.getElementById('course-form-desc').value = '';
+    document.getElementById('course-form-features').value = '';
+    document.getElementById('course-form-duration').value = '2h/buổi';
+    document.getElementById('course-form-max').value = 'Tối đa 10';
+    document.getElementById('course-form-sessions').value = '2 buổi/tuần';
+    document.getElementById('course-form-price').value = '';
+    document.getElementById('course-form-status').value = 'available';
+    document.getElementById('course-form-hidden').checked = false;
+    document.getElementById('course-form-sort').value = allCourses.length;
+  }
+
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closeCourseModal() {
+  const modal = document.getElementById('modal-course');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+}
+
+async function saveCourse() {
+  const msg = document.getElementById('msg-courses');
+  const id = document.getElementById('course-form-id').value;
+  const featuresText = document.getElementById('course-form-features').value;
+  const features = featuresText.split('\n').map(f => f.trim()).filter(f => f);
+
+  const body = {
+    name: document.getElementById('course-form-name').value.trim(),
+    short_name: document.getElementById('course-form-short').value.trim(),
+    emoji: document.getElementById('course-form-emoji').value.trim(),
+    color: document.getElementById('course-form-color').value,
+    sub: document.getElementById('course-form-sub').value.trim(),
+    description: document.getElementById('course-form-desc').value.trim(),
+    features: features,
+    duration: document.getElementById('course-form-duration').value.trim(),
+    max_students: document.getElementById('course-form-max').value.trim(),
+    sessions: document.getElementById('course-form-sessions').value.trim(),
+    price: document.getElementById('course-form-price').value.trim(),
+    status: document.getElementById('course-form-status').value,
+    hidden: document.getElementById('course-form-hidden').checked,
+    sort_order: parseInt(document.getElementById('course-form-sort').value) || 0,
+  };
+
+  if(!body.name) { showMsg(msg, '❌ Tên khóa học là bắt buộc', true); return; }
+
+  try {
+    let res;
+    if(id) {
+      // UPDATE
+      res = await API(`/api/admin/courses/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+    } else {
+      // CREATE
+      res = await API('/api/admin/courses', { method: 'POST', body: JSON.stringify(body) });
+    }
+    if(checkAuth(res)) return;
+    const data = await res.json().catch(() => ({}));
+    if(res.ok) {
+      showMsg(msg, '✅ ' + (data.message || 'Đã lưu'), false);
+      closeCourseModal();
+      // Reload
+      const coursesRes = await API('/api/admin/courses');
+      allCourses = await coursesRes.json() || [];
+      renderCourses();
+      // Also reload schedule in case cascade happened
+      const schedRes = await API('/api/admin/schedule');
+      allSchedule = await schedRes.json() || [];
+      renderSchedule();
+    } else {
+      showMsg(msg, '❌ ' + (data.error || 'Lỗi'), true);
+    }
+  } catch(e) {
+    showMsg(msg, '❌ Lỗi kết nối', true);
+  }
+}
+
+async function deleteCourse(id) {
+  const msg = document.getElementById('msg-courses');
+  const c = allCourses.find(x => x.id === id);
+  if(!c) return;
+
+  const schedCount = allSchedule.filter(s => s.course_id === id).length;
+  let confirmMsg = `Xóa khóa học "${c.name}"?`;
+  if(schedCount > 0) confirmMsg += `\n⚠️ ${schedCount} lịch học liên quan cũng sẽ bị xóa!`;
+
+  if(!confirm(confirmMsg)) return;
+
+  try {
+    const res = await API(`/api/admin/courses/${id}`, { method: 'DELETE' });
+    if(checkAuth(res)) return;
+    const data = await res.json().catch(() => ({}));
+    if(res.ok) {
+      showMsg(msg, '✅ ' + (data.message || 'Đã xóa'), false);
+      const coursesRes = await API('/api/admin/courses');
+      allCourses = await coursesRes.json() || [];
+      renderCourses();
+      const schedRes = await API('/api/admin/schedule');
+      allSchedule = await schedRes.json() || [];
+      renderSchedule();
+    } else {
+      showMsg(msg, '❌ ' + (data.error || 'Lỗi'), true);
+    }
+  } catch(e) {
+    showMsg(msg, '❌ Lỗi kết nối', true);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SCHEDULE CRUD
+// ═══════════════════════════════════════════════════════════════
+
+function renderSchedule() {
   const container = document.getElementById('schedule-list');
   if(!container) return;
-  container.innerHTML = items.map((s, i) => `
-    <div class="border rounded-lg p-4 grid md:grid-cols-6 gap-3 items-center ${s.hidden ? 'bg-gray-50 opacity-60' : ''}">
-      <div>
-        <label class="block text-xs text-gray-500 mb-1">Lớp</label>
-        <input class="s-class w-full border rounded px-2 py-1 text-sm" value="${esc(s.class_name)}" data-idx="${i}">
-      </div>
-      <div>
-        <label class="block text-xs text-gray-500 mb-1">Thời gian</label>
-        <input class="s-time w-full border rounded px-2 py-1 text-sm" value="${esc(s.time_slot)}" data-idx="${i}">
-      </div>
-      <div>
-        <label class="block text-xs text-gray-500 mb-1">Ngày học</label>
-        <input class="s-days w-full border rounded px-2 py-1 text-sm" value="${esc(s.days)}" data-idx="${i}">
-      </div>
-      <div class="flex items-center gap-2">
-        <label class="toggle"><input type="checkbox" class="s-status" data-idx="${i}" ${s.status==='available'?'checked':''}><span class="slider"></span></label>
-        <span class="text-xs text-gray-500 s-status-label">${s.status==='available'?'Còn chỗ':'Hết chỗ'}</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <label class="toggle"><input type="checkbox" class="s-visible" data-idx="${i}" ${!s.hidden?'checked':''}><span class="slider"></span></label>
-        <span class="text-xs text-gray-500 s-visible-label">${s.hidden?'Đang ẩn':'Hiển thị'}</span>
-      </div>
-      <div class="text-xs text-gray-400">ID: ${s.id}</div>
-    </div>
-  `).join('');
 
-  container.querySelectorAll('.s-status').forEach(cb => {
-    cb.addEventListener('change', () => { cb.closest('.flex').querySelector('.s-status-label').textContent = cb.checked ? 'Còn chỗ' : 'Hết chỗ'; });
+  if(allSchedule.length === 0){
+    container.innerHTML = '<p class="text-gray-400 text-sm text-center py-8">Chưa có lịch học nào. Nhấn "Thêm lịch học" để tạo.</p>';
+    return;
+  }
+
+  container.innerHTML = allSchedule.map((s) => {
+    const hiddenClass = s.hidden ? 'bg-gray-50 opacity-60' : '';
+    const course = allCourses.find(c => c.id === s.course_id);
+    const courseName = course ? course.name : '(không rõ)';
+    const statusColors = {
+      available: 'bg-green-100 text-green-700',
+      almost_full: 'bg-yellow-100 text-yellow-700',
+      full: 'bg-red-100 text-red-700',
+    };
+    const statusClass = statusColors[s.status] || statusColors.available;
+    const hiddenBadge = s.hidden
+      ? '<span class="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs font-semibold rounded-full">Đang ẩn</span>'
+      : '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">Hiển thị</span>';
+
+    return `
+    <div class="border rounded-lg p-4 ${hiddenClass}" data-schedule-id="${s.id}">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="font-bold text-gray-800">${esc(s.class_name)}</span>
+            <span class="px-2 py-0.5 ${statusClass} text-xs font-semibold rounded-full">${esc(s.status_text||'🟢 Còn chỗ')}</span>
+            ${hiddenBadge}
+          </div>
+          <div class="flex items-center gap-3 text-xs text-gray-500">
+            <span>📚 ${esc(courseName)}</span>
+            <span>🕐 ${esc(s.time_slot||'')}</span>
+            <span>📅 ${esc(s.days||'')}</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <button class="btn-edit-schedule px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100" data-id="${s.id}">✏️ Sửa</button>
+          <button class="btn-del-schedule px-2 py-1 text-xs bg-red-50 text-red-600 rounded hover:bg-red-100" data-id="${s.id}">🗑️ Xóa</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  container.querySelectorAll('.btn-edit-schedule').forEach(btn => {
+    btn.addEventListener('click', () => openScheduleModal(parseInt(btn.dataset.id)));
   });
-  container.querySelectorAll('.s-visible').forEach(cb => {
-    cb.addEventListener('change', () => {
-      const label = cb.closest('.flex').querySelector('.s-visible-label');
-      const row = cb.closest('.border');
-      if(cb.checked){ label.textContent='Hiển thị'; row.classList.remove('bg-gray-50','opacity-60'); }
-      else { label.textContent='Đang ẩn'; row.classList.add('bg-gray-50','opacity-60'); }
-    });
+  container.querySelectorAll('.btn-del-schedule').forEach(btn => {
+    btn.addEventListener('click', () => deleteSchedule(parseInt(btn.dataset.id)));
   });
 }
 
-// ─── Title Style Editor ───────────────────────────────────────
+// ─── Schedule Modal ───────────────────────────────────────────
+function openScheduleModal(scheduleId) {
+  const modal = document.getElementById('modal-schedule');
+  const title = document.getElementById('modal-schedule-title');
+  const isEdit = !!scheduleId;
+  title.textContent = isEdit ? 'Sửa lịch học' : 'Thêm lịch học';
+
+  // Populate course dropdown
+  const courseSelect = document.getElementById('schedule-form-course');
+  courseSelect.innerHTML = '<option value="">-- Chọn khóa học --</option>' +
+    allCourses.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+
+  if(isEdit) {
+    const s = allSchedule.find(x => x.id === scheduleId);
+    if(!s) return;
+    document.getElementById('schedule-form-id').value = s.id;
+    document.getElementById('schedule-form-course').value = s.course_id || '';
+    document.getElementById('schedule-form-name').value = s.class_name || '';
+    document.getElementById('schedule-form-time').value = s.time_slot || '';
+    document.getElementById('schedule-form-days').value = s.days || '';
+    document.getElementById('schedule-form-status').value = s.status || 'available';
+    document.getElementById('schedule-form-statustext').value = s.status_text || '🟢 Còn chỗ';
+    document.getElementById('schedule-form-hidden').checked = !!s.hidden;
+    document.getElementById('schedule-form-sort').value = s.sort_order || 0;
+  } else {
+    document.getElementById('schedule-form-id').value = '';
+    document.getElementById('schedule-form-course').value = '';
+    document.getElementById('schedule-form-name').value = '';
+    document.getElementById('schedule-form-time').value = '';
+    document.getElementById('schedule-form-days').value = '';
+    document.getElementById('schedule-form-status').value = 'available';
+    document.getElementById('schedule-form-statustext').value = '🟢 Còn chỗ';
+    document.getElementById('schedule-form-hidden').checked = false;
+    document.getElementById('schedule-form-sort').value = allSchedule.length;
+  }
+
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closeScheduleModal() {
+  const modal = document.getElementById('modal-schedule');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+}
+
+async function saveSchedule() {
+  const msg = document.getElementById('msg-schedule');
+  const id = document.getElementById('schedule-form-id').value;
+
+  const body = {
+    course_id: parseInt(document.getElementById('schedule-form-course').value) || null,
+    class_name: document.getElementById('schedule-form-name').value.trim(),
+    time_slot: document.getElementById('schedule-form-time').value.trim(),
+    days: document.getElementById('schedule-form-days').value.trim(),
+    status: document.getElementById('schedule-form-status').value,
+    status_text: document.getElementById('schedule-form-statustext').value.trim(),
+    hidden: document.getElementById('schedule-form-hidden').checked,
+    sort_order: parseInt(document.getElementById('schedule-form-sort').value) || 0,
+  };
+
+  if(!body.class_name) { showMsg(msg, '❌ Tên lớp là bắt buộc', true); return; }
+
+  try {
+    let res;
+    if(id) {
+      res = await API(`/api/admin/schedule/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+    } else {
+      res = await API('/api/admin/schedule', { method: 'POST', body: JSON.stringify(body) });
+    }
+    if(checkAuth(res)) return;
+    const data = await res.json().catch(() => ({}));
+    if(res.ok) {
+      showMsg(msg, '✅ ' + (data.message || 'Đã lưu'), false);
+      closeScheduleModal();
+      const schedRes = await API('/api/admin/schedule');
+      allSchedule = await schedRes.json() || [];
+      renderSchedule();
+    } else {
+      showMsg(msg, '❌ ' + (data.error || 'Lỗi'), true);
+    }
+  } catch(e) {
+    showMsg(msg, '❌ Lỗi kết nối', true);
+  }
+}
+
+async function deleteSchedule(id) {
+  const msg = document.getElementById('msg-schedule');
+  const s = allSchedule.find(x => x.id === id);
+  if(!s) return;
+
+  if(!confirm(`Xóa lịch học "${s.class_name}"?`)) return;
+
+  try {
+    const res = await API(`/api/admin/schedule/${id}`, { method: 'DELETE' });
+    if(checkAuth(res)) return;
+    const data = await res.json().catch(() => ({}));
+    if(res.ok) {
+      showMsg(msg, '✅ ' + (data.message || 'Đã xóa'), false);
+      const schedRes = await API('/api/admin/schedule');
+      allSchedule = await schedRes.json() || [];
+      renderSchedule();
+    } else {
+      showMsg(msg, '❌ ' + (data.error || 'Lỗi'), true);
+    }
+  } catch(e) {
+    showMsg(msg, '❌ Lỗi kết nối', true);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TITLE STYLE EDITOR (giữ nguyên)
+// ═══════════════════════════════════════════════════════════════
 const titleSelector = document.getElementById('title-selector');
 const titleFont = document.getElementById('title-font');
 const titleSize = document.getElementById('title-size');
@@ -265,7 +557,10 @@ function updateSavedStylesList() {
   }).join('');
 }
 
-// ─── Save handlers ────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  SAVE HANDLERS (giữ nguyên cho content, teacher, titles)
+// ═══════════════════════════════════════════════════════════════
+
 document.getElementById('btn-save-content')?.addEventListener('click', async () => {
   const msg = document.getElementById('msg-content');
   const btn = document.getElementById('btn-save-content');
@@ -293,16 +588,15 @@ document.getElementById('btn-save-content')?.addEventListener('click', async () 
       footer_map: document.getElementById('f-map').value,
     };
     const res = await API('/api/admin/content', { method: 'PUT', body: JSON.stringify(body) });
-    const data = await res.json();
+    if(checkAuth(res)) return;
+    const data = await res.json().catch(() => ({}));
     msg.classList.remove('text-red-600','text-green-600');
     if(res.ok){ msg.classList.add('text-green-600'); msg.textContent = '✅ ' + (data.message||'Đã lưu'); }
-    else if(res.status===401){ localStorage.removeItem('admin_token'); window.location.href='login.html'; }
     else { msg.classList.add('text-red-600'); msg.textContent = '❌ ' + (data.error||'Lỗi'); }
   } catch { msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi kết nối'; }
   finally { btn.textContent = '💾 Lưu nội dung'; btn.disabled = false; }
 });
 
-// Save title style
 document.getElementById('btn-save-title-style')?.addEventListener('click', async () => {
   const msg = document.getElementById('msg-titles');
   const key = titleSelector.value;
@@ -316,13 +610,13 @@ document.getElementById('btn-save-title-style')?.addEventListener('click', async
   };
   try {
     const res = await API('/api/admin/title-styles', { method: 'PUT', body: JSON.stringify(titleStyles) });
+    if(checkAuth(res)) return;
     if(res.ok){ msg.classList.remove('text-red-600'); msg.classList.add('text-green-600'); msg.textContent = '✅ Đã lưu style'; }
     else { msg.classList.remove('text-green-600'); msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi'; }
   } catch { msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi kết nối'; }
   updateSavedStylesList();
 });
 
-// Reset title style
 document.getElementById('btn-reset-title-style')?.addEventListener('click', () => {
   const key = titleSelector.value;
   delete titleStyles[key];
@@ -336,7 +630,6 @@ document.getElementById('btn-reset-title-style')?.addEventListener('click', () =
   msg.textContent = '🔄 Đã reset';
 });
 
-// Save teacher
 document.getElementById('btn-save-teacher')?.addEventListener('click', async () => {
   const msg = document.getElementById('msg-teacher');
   const btn = document.getElementById('btn-save-teacher');
@@ -368,73 +661,36 @@ document.getElementById('btn-save-teacher')?.addEventListener('click', async () 
       teacher_photo: photoUrl,
     };
     const res = await API('/api/admin/content', { method: 'PUT', body: JSON.stringify(body) });
-    const data = await res.json();
+    if(checkAuth(res)) { btn.textContent = '💾 Lưu giáo viên'; btn.disabled = false; return; }
+    const data = await res.json().catch(() => ({}));
     msg.classList.remove('text-red-600','text-green-600');
     if(res.ok){
       msg.classList.add('text-green-600'); msg.textContent = '✅ ' + (data.message||'Đã lưu');
       const preview = document.getElementById('teacher-photo-preview');
       if(preview && photoUrl){ preview.src = photoUrl; preview.style.display='block'; }
     }
-    else if(res.status===401){ localStorage.removeItem('admin_token'); window.location.href='login.html'; }
     else { msg.classList.add('text-red-600'); msg.textContent = '❌ ' + (data.error||'Lỗi'); }
   } catch { msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi kết nối'; }
   finally { btn.textContent = '💾 Lưu giáo viên'; btn.disabled = false; }
 });
 
-// Save courses
-document.getElementById('btn-save-courses')?.addEventListener('click', async () => {
-  const msg = document.getElementById('msg-courses');
-  const btn = document.getElementById('btn-save-courses');
-  btn.textContent = 'Đang lưu...'; btn.disabled = true;
+// ═══════════════════════════════════════════════════════════════
+//  COURSES & SCHEDULE BUTTON BINDINGS
+// ═══════════════════════════════════════════════════════════════
 
-  const courses = allCourses.map((c, i) => ({
-    id: c.id,
-    name: document.querySelector(`.c-name[data-idx="${i}"]`)?.value || c.name,
-    short_name: document.querySelector(`.c-short[data-idx="${i}"]`)?.value || c.short_name,
-    emoji: document.querySelector(`.c-emoji[data-idx="${i}"]`)?.value || c.emoji,
-    color: document.querySelector(`.c-color[data-idx="${i}"]`)?.value || c.color,
-    status: document.querySelector(`.c-status[data-idx="${i}"]`)?.checked ? 'available' : 'full',
-    hidden: !document.querySelector(`.c-visible[data-idx="${i}"]`)?.checked,
-  }));
+document.getElementById('btn-add-course')?.addEventListener('click', () => openCourseModal(null));
+document.getElementById('btn-course-cancel')?.addEventListener('click', closeCourseModal);
+document.getElementById('btn-course-save')?.addEventListener('click', saveCourse);
+document.getElementById('modal-course')?.addEventListener('click', (e) => { if(e.target === e.currentTarget) closeCourseModal(); });
 
-  try {
-    const res = await API('/api/admin/courses', { method: 'PUT', body: JSON.stringify({ courses }) });
-    const data = await res.json();
-    msg.classList.remove('text-red-600','text-green-600');
-    if(res.ok){ msg.classList.add('text-green-600'); msg.textContent = '✅ ' + (data.message||'Đã lưu'); }
-    else if(res.status===401){ localStorage.removeItem('admin_token'); window.location.href='login.html'; }
-    else { msg.classList.add('text-red-600'); msg.textContent = '❌ ' + (data.error||'Lỗi'); }
-  } catch { msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi kết nối'; }
-  finally { btn.textContent = '💾 Lưu khóa học'; btn.disabled = false; }
-});
+document.getElementById('btn-add-schedule')?.addEventListener('click', () => openScheduleModal(null));
+document.getElementById('btn-schedule-cancel')?.addEventListener('click', closeScheduleModal);
+document.getElementById('btn-schedule-save')?.addEventListener('click', saveSchedule);
+document.getElementById('modal-schedule')?.addEventListener('click', (e) => { if(e.target === e.currentTarget) closeScheduleModal(); });
 
-// Save schedule
-document.getElementById('btn-save-schedule')?.addEventListener('click', async () => {
-  const msg = document.getElementById('msg-schedule');
-  const btn = document.getElementById('btn-save-schedule');
-  btn.textContent = 'Đang lưu...'; btn.disabled = true;
-
-  const items = allSchedule.map((s, i) => ({
-    id: s.id,
-    class_name: document.querySelector(`.s-class[data-idx="${i}"]`)?.value || s.class_name,
-    time_slot: document.querySelector(`.s-time[data-idx="${i}"]`)?.value || s.time_slot,
-    days: document.querySelector(`.s-days[data-idx="${i}"]`)?.value || s.days,
-    status: document.querySelector(`.s-status[data-idx="${i}"]`)?.checked ? 'available' : 'full',
-    hidden: !document.querySelector(`.s-visible[data-idx="${i}"]`)?.checked,
-  }));
-
-  try {
-    const res = await API('/api/admin/schedule', { method: 'PUT', body: JSON.stringify({ items }) });
-    const data = await res.json();
-    msg.classList.remove('text-red-600','text-green-600');
-    if(res.ok){ msg.classList.add('text-green-600'); msg.textContent = '✅ ' + (data.message||'Đã lưu'); }
-    else if(res.status===401){ localStorage.removeItem('admin_token'); window.location.href='login.html'; }
-    else { msg.classList.add('text-red-600'); msg.textContent = '❌ ' + (data.error||'Lỗi'); }
-  } catch { msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi kết nối'; }
-  finally { btn.textContent = '💾 Lưu lịch học'; btn.disabled = false; }
-});
-
-// ─── Registrations ────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  REGISTRATIONS (giữ nguyên)
+// ═══════════════════════════════════════════════════════════════
 async function loadRegistrations() {
   try {
     const res = await API('/api/admin/registrations');

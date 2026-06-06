@@ -8,7 +8,33 @@ require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'change-this-secret-key';
+
+// ─── JWT Secret — auto-generate if missing ───
+let JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  const crypto = require('crypto');
+  JWT_SECRET = crypto.randomBytes(64).toString('hex');
+  console.warn('⚠️  JWT_SECRET was missing or too weak. A random secret has been generated for this session.');
+  console.warn('⚠️  Set a permanent JWT_SECRET in .env for production to avoid token invalidation on restart.');
+}
+
+// ─── XSS Sanitizer — strip all HTML tags from string values ───
+function sanitizeStr(val) {
+  if (typeof val !== 'string') return val;
+  return val.replace(/<[^>]*>/g, '').trim();
+}
+
+// Whitelist of allowed settings keys to prevent DB pollution
+const ALLOWED_SETTINGS_KEYS = new Set([
+  'site_name','site_name_accent','hero_badge','hero_title1','hero_title2','hero_desc',
+  'hero_stat1_value','hero_stat1_label','hero_stat2_value','hero_stat2_label',
+  'hero_stat3_value','hero_stat3_label','teacher_name','teacher_label','teacher_photo',
+  'teacher_photo_alt','teacher_bio','satisfaction_value','satisfaction_label',
+  'courses_section_title','courses_section_desc','schedule_section_title','schedule_section_desc',
+  'form_section_title','form_section_desc','footer_brand','footer_brand_accent',
+  'footer_desc','footer_hotline','footer_address','footer_map','zalo_url','hotline_number',
+  'title_styles',
+]);
 
 // ─── Middleware ───────────────────────────────────────────────
 app.use(express.json({ limit: '1mb' }));
@@ -42,7 +68,7 @@ function auth(req, res, next) {
 // ─── GET /api/content — Nội dung trang chủ ────────────────────
 app.get('/api/content', async (req, res) => {
   try {
-    if (contentCache && Date.now() - cacheTime < CACHE_TTL) {
+    if (contentCache !== null && Date.now() - cacheTime < CACHE_TTL) {
       return res.json(contentCache);
     }
 
@@ -55,11 +81,17 @@ app.get('/api/content', async (req, res) => {
     const { rows: coursesRows } = await pool.query(
       'SELECT * FROM courses WHERE hidden = false ORDER BY sort_order ASC'
     );
+    const courseIds = coursesRows.map(c => c.id);
 
-    // Schedule (chỉ hiện hidden=false)
-    const { rows: scheduleRows } = await pool.query(
-      'SELECT * FROM schedule WHERE hidden = false ORDER BY sort_order ASC'
-    );
+    // Schedule (chỉ hiện hidden=false VÀ thuộc course không bị ẩn)
+    let scheduleRows = [];
+    if (courseIds.length > 0) {
+      const { rows } = await pool.query(
+        'SELECT * FROM schedule WHERE hidden = false AND course_id = ANY($1::int[]) ORDER BY sort_order ASC',
+        [courseIds]
+      );
+      scheduleRows = rows;
+    }
 
     // Approach
     const { rows: approachRows } = await pool.query(
@@ -187,10 +219,25 @@ app.post('/api/register', async (req, res) => {
     if (!parentName || !phone || !childName) {
       return res.status(400).json({ error: 'Vui lòng điền đầy đủ thông tin' });
     }
+    // Validate phone format (10 digits, starts with 0)
+    const cleanPhone = phone.replace(/\s/g, '');
+    if (!/^0\d{9}$/.test(cleanPhone)) {
+      return res.status(400).json({ error: 'Số điện thoại không hợp lệ (cần 10 số, bắt đầu bằng 0)' });
+    }
+    // Limit input length
+    if (parentName.length > 200 || childName.length > 200) {
+      return res.status(400).json({ error: 'Tên không được vượt quá 200 ký tự' });
+    }
+    if (grade && grade.length > 20) {
+      return res.status(400).json({ error: 'Lớp không được vượt quá 20 ký tự' });
+    }
+    if (note && note.length > 1000) {
+      return res.status(400).json({ error: 'Ghi chú không được vượt quá 1000 ký tự' });
+    }
     await pool.query(
       `INSERT INTO registrations (parent_name, phone, child_name, grade, note)
        VALUES ($1, $2, $3, $4, $5)`,
-      [parentName, phone, childName, grade || '', note || '']
+      [sanitizeStr(parentName.trim()), cleanPhone, sanitizeStr(childName.trim()), sanitizeStr((grade || '').trim()), sanitizeStr((note || '').trim())]
     );
     res.json({ ok: true, message: 'Đăng ký thành công' });
   } catch (err) {
@@ -240,14 +287,27 @@ app.get('/api/admin/courses', auth, async (req, res) => {
 app.put('/api/admin/content', auth, async (req, res) => {
   try {
     const updates = req.body;
-    for (const [key, value] of Object.entries(updates)) {
-      if (typeof value === 'string') {
-        await pool.query(
-          `INSERT INTO settings (key, value) VALUES ($1, $2)
-           ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
-          [key, value]
-        );
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const [key, value] of Object.entries(updates)) {
+        if (typeof value === 'string') {
+          // Whitelist keys + sanitize value
+          if (!ALLOWED_SETTINGS_KEYS.has(key)) continue;
+          const clean = sanitizeStr(value);
+          await client.query(
+            `INSERT INTO settings (key, value) VALUES ($1, $2)
+             ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
+            [key, clean]
+          );
+        }
       }
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
     }
     invalidateCache();
     res.json({ ok: true, message: 'Đã cập nhật nội dung' });
@@ -282,30 +342,17 @@ app.get('/api/admin/schedule', auth, async (req, res) => {
 });
 
 // ─── PUT /api/admin/schedule — Cập nhật lịch học ─────────────
-app.put('/api/admin/schedule', auth, async (req, res) => {
+app.put('/api/admin/schedule/:id', auth, async (req, res) => {
   try {
-    const { items } = req.body;
-    if (!Array.isArray(items)) return res.status(400).json({ error: 'Dữ liệu không hợp lệ' });
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      for (const s of items) {
-        await client.query(
-          `UPDATE schedule SET class_name = $1, time_slot = $2, days = $3, status = $4, status_text = $5, hidden = $6, updated_at = NOW() WHERE id = $7`,
-          [s.class_name || s.class, s.time_slot || s.time, s.days, s.status, s.status_text || s.statusText, s.hidden, s.id]
-        );
-      }
-      await client.query('COMMIT');
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
-    }
+    const { class_name, className, time_slot, timeSlot, days, status, status_text, statusText, hidden, course_id } = req.body;
+    await pool.query(
+      `UPDATE schedule SET course_id = $1, class_name = $2, time_slot = $3, days = $4, status = $5, status_text = $6, hidden = $7, updated_at = NOW() WHERE id = $8`,
+      [course_id || null, class_name || className, time_slot || timeSlot, days, status, status_text || statusText, hidden, req.params.id]
+    );
     invalidateCache();
     res.json({ ok: true, message: 'Đã cập nhật lịch học' });
   } catch (err) {
-    console.error('PUT /api/admin/schedule error:', err.message);
+    console.error('PUT /api/admin/schedule/:id error:', err.message);
     res.status(500).json({ error: 'Lỗi server' });
   }
 });
@@ -332,7 +379,7 @@ app.put('/api/admin/approach', auth, async (req, res) => {
       for (const a of items) {
         await client.query(
           `UPDATE approach SET title = $1, description = $2, updated_at = NOW() WHERE id = $3`,
-          [a.title, a.description || a.desc, a.id]
+          [sanitizeStr(a.title), sanitizeStr(a.description || a.desc), a.id]
         );
       }
       await client.query('COMMIT');
@@ -372,7 +419,7 @@ app.put('/api/admin/why', auth, async (req, res) => {
       for (const w of items) {
         await client.query(
           `UPDATE why_items SET icon = $1, title = $2, description = $3, updated_at = NOW() WHERE id = $4`,
-          [w.icon, w.title, w.description || w.desc, w.id]
+          [sanitizeStr(w.icon), sanitizeStr(w.title), sanitizeStr(w.description || w.desc), w.id]
         );
       }
       await client.query('COMMIT');
@@ -422,42 +469,96 @@ app.put('/api/admin/title-styles', auth, async (req, res) => {
   }
 });
 
-// ─── PUT /api/admin/courses — Cập nhật khóa học ──────────────
-app.put('/api/admin/courses', auth, async (req, res) => {
+// ─── PUT /api/admin/courses/:id — Cập nhật 1 khóa học ────────
+app.put('/api/admin/courses/:id', auth, async (req, res) => {
   try {
-    const { courses } = req.body;
-    if (!Array.isArray(courses)) {
-      return res.status(400).json({ error: 'Dữ liệu không hợp lệ' });
-    }
-
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      for (const c of courses) {
-        await client.query(
-          `UPDATE courses SET
-            name = $1, short_name = $2, emoji = $3, color = $4,
-            sub = $5, desc = $6, features = $7::jsonb,
-            duration = $8, max_students = $9, sessions = $10,
-            price = $11, status = $12, hidden = $13, updated_at = NOW()
-           WHERE id = $14`,
-          [c.name, c.short_name || c.shortName, c.emoji, c.color, c.sub, c.description || c.desc,
-           JSON.stringify(c.features || []), c.duration, c.max_students || c.maxStudents,
-           c.sessions, c.price, c.status, c.hidden, c.id]
-        );
-      }
-      await client.query('COMMIT');
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
-    }
-
+    const { name, short_name, shortName, emoji, color, sub, description, features, duration, max_students, maxStudents, sessions, price, status, hidden, sort_order } = req.body;
+    await pool.query(
+      `UPDATE courses SET
+        name = $1, short_name = $2, emoji = $3, color = $4,
+        sub = $5, description = $6, features = $7::jsonb,
+        duration = $8, max_students = $9, sessions = $10,
+        price = $11, status = $12, hidden = $13, sort_order = $14, updated_at = NOW()
+       WHERE id = $15`,
+      [sanitizeStr(name), sanitizeStr(short_name || shortName), sanitizeStr(emoji), color,
+       sanitizeStr(sub), sanitizeStr(description),
+       JSON.stringify(features || []), sanitizeStr(duration), sanitizeStr(max_students || maxStudents),
+       sanitizeStr(sessions), sanitizeStr(price), status, hidden || false, sort_order || 0, req.params.id]
+    );
     invalidateCache();
     res.json({ ok: true, message: 'Đã cập nhật khóa học' });
   } catch (err) {
-    console.error('PUT /api/admin/courses error:', err.message);
+    console.error('PUT /api/admin/courses/:id error:', err.message);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
+// ─── POST /api/admin/courses — Thêm khóa học mới ──────────────
+app.post('/api/admin/courses', auth, async (req, res) => {
+  try {
+    const { name, short_name, shortName, emoji, color, sub, description, desc, features, duration, max_students, maxStudents, sessions, price, status, sort_order } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: 'Tên khóa học là bắt buộc' });
+    }
+    const { rows } = await pool.query(
+      `INSERT INTO courses (name, short_name, emoji, color, sub, description, features, duration, max_students, sessions, price, status, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, $13)
+       RETURNING *`,
+      [sanitizeStr(name), sanitizeStr(short_name || shortName || ''), sanitizeStr(emoji || '📖'), color || 'blue',
+       sanitizeStr(sub || ''), sanitizeStr(description || desc || ''),
+       JSON.stringify(features || []), sanitizeStr(duration || '2h/buổi'), sanitizeStr(max_students || maxStudents || 'Tối đa 10'),
+       sanitizeStr(sessions || '2 buổi/tuần'), sanitizeStr(price || ''), status || 'available', sort_order || 0]
+    );
+    invalidateCache();
+    res.json({ ok: true, message: 'Đã thêm khóa học mới', course: rows[0] });
+  } catch (err) {
+    console.error('POST /api/admin/courses error:', err.message);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
+// ─── POST /api/admin/schedule — Thêm lịch học mới ─────────────
+app.post('/api/admin/schedule', auth, async (req, res) => {
+  try {
+    const { class_name, className, time_slot, timeSlot, days, status, status_text, statusText, sort_order, course_id } = req.body;
+    if (!class_name && !className) {
+      return res.status(400).json({ error: 'Tên lớp là bắt buộc' });
+    }
+    const { rows } = await pool.query(
+      `INSERT INTO schedule (course_id, class_name, time_slot, days, status, status_text, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [course_id || null, class_name || className, time_slot || timeSlot || '', days || '', status || 'available',
+       status_text || statusText || '🟢 Còn chỗ', sort_order || 0]
+    );
+    invalidateCache();
+    res.json({ ok: true, message: 'Đã thêm lịch học mới', schedule: rows[0] });
+  } catch (err) {
+    console.error('POST /api/admin/schedule error:', err.message);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
+// ─── DELETE /api/admin/courses/:id — Xóa khóa học (cascade xóa schedule) ──
+app.delete('/api/admin/courses/:id', auth, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM courses WHERE id = $1', [req.params.id]);
+    invalidateCache();
+    res.json({ ok: true, message: 'Đã xóa khóa học' });
+  } catch (err) {
+    console.error('DELETE /api/admin/courses/:id error:', err.message);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
+// ─── DELETE /api/admin/schedule/:id — Xóa lịch học ────────────
+app.delete('/api/admin/schedule/:id', auth, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM schedule WHERE id = $1', [req.params.id]);
+    invalidateCache();
+    res.json({ ok: true, message: 'Đã xóa lịch học' });
+  } catch (err) {
+    console.error('DELETE /api/admin/schedule/:id error:', err.message);
     res.status(500).json({ error: 'Lỗi server' });
   }
 });

@@ -43,10 +43,11 @@ async function initDB() {
       );
     `);
 
-    // ─── Schedule: lịch học ───
+    // ─── Schedule: lịch học (liên kết với courses) ───
     await client.query(`
       CREATE TABLE IF NOT EXISTS schedule (
         id SERIAL PRIMARY KEY,
+        course_id INT REFERENCES courses(id) ON DELETE CASCADE,
         class_name VARCHAR(100) NOT NULL DEFAULT '',
         time_slot VARCHAR(50) NOT NULL DEFAULT '',
         days VARCHAR(50) NOT NULL DEFAULT '',
@@ -66,7 +67,8 @@ async function initDB() {
         title VARCHAR(200) NOT NULL DEFAULT '',
         description TEXT NOT NULL DEFAULT '',
         sort_order INT DEFAULT 0,
-        created_at TIMESTAMP DEFAULT NOW()
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
       );
     `);
 
@@ -78,7 +80,8 @@ async function initDB() {
         title VARCHAR(200) NOT NULL DEFAULT '',
         description TEXT NOT NULL DEFAULT '',
         sort_order INT DEFAULT 0,
-        created_at TIMESTAMP DEFAULT NOW()
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
       );
     `);
 
@@ -118,6 +121,9 @@ async function initDB() {
     await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS max_students VARCHAR(50) NOT NULL DEFAULT 'Tối đa 10';`);
     await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS sessions VARCHAR(50) NOT NULL DEFAULT '2 buổi/tuần';`);
     await client.query(`ALTER TABLE schedule ADD COLUMN IF NOT EXISTS hidden BOOLEAN NOT NULL DEFAULT false;`);
+    await client.query(`ALTER TABLE schedule ADD COLUMN IF NOT EXISTS course_id INT REFERENCES courses(id) ON DELETE CASCADE;`);
+    await client.query(`ALTER TABLE approach ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+    await client.query(`ALTER TABLE why_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
 
     // ─── Seed Settings ───
     const defaultSettings = [
@@ -182,9 +188,10 @@ async function initDB() {
       }
     }
 
-    // ─── Seed Schedule ───
+    // ─── Seed Schedule (gán course_id theo thứ tự courses) ───
     const { rows: existingSchedule } = await client.query('SELECT COUNT(*) FROM schedule');
     if (parseInt(existingSchedule[0].count) === 0) {
+      const { rows: courseRows } = await client.query('SELECT id FROM courses ORDER BY sort_order ASC');
       const defaultSchedule = [
         { class_name: 'Lớp 6A', time_slot: '18:00 - 20:00', days: 'Thứ 2, 4, 6', status: 'available', status_text: '🟢 Còn chỗ', sort_order: 1 },
         { class_name: 'Lớp 6B', time_slot: '18:00 - 20:00', days: 'Thứ 3, 5, 7', status: 'available', status_text: '🟢 Còn chỗ', sort_order: 2 },
@@ -192,11 +199,13 @@ async function initDB() {
         { class_name: 'Lớp 8', time_slot: '19:00 - 21:00', days: 'Thứ 3, 5, 7', status: 'available', status_text: '🟢 Còn chỗ', sort_order: 4 },
         { class_name: 'Lớp 9', time_slot: '19:00 - 21:30', days: 'Thứ 2, 4, 6', status: 'full', status_text: '🔴 Đầy', sort_order: 5 },
       ];
-      for (const s of defaultSchedule) {
+      for (let i = 0; i < defaultSchedule.length; i++) {
+        const s = defaultSchedule[i];
+        const courseId = courseRows[i] ? courseRows[i].id : null;
         await client.query(
-          `INSERT INTO schedule (class_name, time_slot, days, status, status_text, sort_order)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [s.class_name, s.time_slot, s.days, s.status, s.status_text, s.sort_order]
+          `INSERT INTO schedule (course_id, class_name, time_slot, days, status, status_text, sort_order)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [courseId, s.class_name, s.time_slot, s.days, s.status, s.status_text, s.sort_order]
         );
       }
     }
@@ -238,11 +247,19 @@ async function initDB() {
     const { rows: existingAdmins } = await client.query('SELECT COUNT(*) FROM admins');
     if (parseInt(existingAdmins[0].count) === 0) {
       const bcrypt = require('bcrypt');
-      const hash = await bcrypt.hash('admin123', 10);
+      // Generate a random strong default password
+      const crypto = require('crypto');
+      const defaultPassword = crypto.randomBytes(12).toString('base64').replace(/[+/=]/g, '').slice(0, 16);
+      const hash = await bcrypt.hash(defaultPassword, 10);
       await client.query(
         `INSERT INTO admins (username, password_hash) VALUES ($1, $2)`,
         ['admin', hash]
       );
+      console.log('═'.repeat(60));
+      console.log('🔑 DEFAULT ADMIN CREDENTIALS (CHANGE IMMEDIATELY!)');
+      console.log(`   Username: admin`);
+      console.log(`   Password: ${defaultPassword}`);
+      console.log('═'.repeat(60));
     }
 
     await client.query('COMMIT');

@@ -218,7 +218,7 @@
       </div>
 
       <div class="mt-4 flex items-center gap-4">
-        <button id="btn-save-title-style" class="admin-btn admin-btn-primary">💾 Lưa style tiêu đề</button>
+        <button id="btn-save-title-style" class="admin-btn admin-btn-primary">💾 Lưu style tiêu đề</button>
         <button id="btn-reset-title-style" class="admin-btn admin-btn-success">🔄 Reset về mặc định</button>
         <span id="msg-titles" class="text-sm font-medium"></span>
       </div>
@@ -286,25 +286,93 @@
   <!-- TAB 4: KHÓA HỌC -->
   <div id="tab-courses" class="max-w-6xl mx-auto px-4 mt-6 hidden">
     <div class="bg-white rounded-xl shadow p-6">
-      <h2 class="text-lg font-bold mb-2">📚 Quản lý Khóa học</h2>
-      <p class="text-sm text-gray-500 mb-4">Toggle "Hiển thị" để ẩn/hiện khóa học trên trang chủ.</p>
-      <div id="courses-list" class="space-y-4"></div>
-      <div class="mt-4 flex items-center gap-4">
-        <button id="btn-save-courses" class="admin-btn admin-btn-primary">💾 Lưu khóa học</button>
-        <span id="msg-courses" class="text-sm font-medium"></span>
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-bold">📚 Quản lý Khóa học</h2>
+          <p class="text-sm text-gray-500">Thêm, sửa, xóa và ẩn/hiện. Khi ẩn khóa học, lịch học liên quan cũng ẩn theo.</p>
+        </div>
+        <button id="btn-add-course" class="admin-btn admin-btn-success text-sm">➕ Thêm khóa học</button>
       </div>
+      <div id="courses-list" class="space-y-3"></div>
+      <div class="mt-4"><span id="msg-courses" class="text-sm font-medium"></span></div>
     </div>
   </div>
 
   <!-- TAB 5: LỊCH HỌC -->
   <div id="tab-schedule" class="max-w-6xl mx-auto px-4 mt-6 hidden">
     <div class="bg-white rounded-xl shadow p-6">
-      <h2 class="text-lg font-bold mb-2">📅 Cấu hình Lịch học</h2>
-      <p class="text-sm text-gray-500 mb-4">Toggle "Hiển thị" để ẩn/hiện dòng lịch học trên trang chủ.</p>
-      <div id="schedule-list" class="space-y-4"></div>
-      <div class="mt-4 flex items-center gap-4">
-        <button id="btn-save-schedule" class="admin-btn admin-btn-primary">💾 Lưu lịch học</button>
-        <span id="msg-schedule" class="text-sm font-medium"></span>
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-bold">📅 Quản lý Lịch học</h2>
+          <p class="text-sm text-gray-500">Mỗi lịch học thuộc một khóa học. Khi xóa khóa học, lịch học cũng xóa theo.</p>
+        </div>
+        <button id="btn-add-schedule" class="admin-btn admin-btn-success text-sm">➕ Thêm lịch học</button>
+      </div>
+      <div id="schedule-list" class="space-y-3"></div>
+      <div class="mt-4"><span id="msg-schedule" class="text-sm font-medium"></span></div>
+    </div>
+  </div>
+
+  <!-- MODAL: Form khóa học -->
+  <div id="modal-course" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6 max-h-[90vh] overflow-y-auto">
+      <h3 id="modal-course-title" class="text-lg font-bold mb-4">Thêm khóa học</h3>
+      <input type="hidden" id="course-form-id">
+      <div class="space-y-3">
+        <div><label class="admin-label">Tên khóa học *</label><input id="course-form-name" class="admin-input" placeholder="Ngữ Văn Lớp 6"></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="admin-label">Tên ngắn</label><input id="course-form-short" class="admin-input" placeholder="LỚP 6"></div>
+          <div><label class="admin-label">Emoji</label><input id="course-form-emoji" class="admin-input" placeholder="📖" value="📖"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="admin-label">Màu</label><select id="course-form-color" class="admin-input"><option value="blue">blue</option><option value="green">green</option><option value="purple">purple</option><option value="orange">orange</option></select></div>
+          <div><label class="admin-label">Sub title</label><input id="course-form-sub" class="admin-input" placeholder="Nền tảng vững chắc"></div>
+        </div>
+        <div><label class="admin-label">Mô tả</label><textarea id="course-form-desc" class="admin-input" rows="2" placeholder="Mô tả khóa học..."></textarea></div>
+        <div><label class="admin-label">Tính năng (mỗi dòng một)</label><textarea id="course-form-features" class="admin-input" rows="3" placeholder="Tính năng 1&#10;Tính năng 2"></textarea></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="admin-label">Thời lượng</label><input id="course-form-duration" class="admin-input" value="2h/buổi"></div>
+          <div><label class="admin-label">Số HV tối đa</label><input id="course-form-max" class="admin-input" value="Tối đa 10"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="admin-label">Buổi/tuần</label><input id="course-form-sessions" class="admin-input" value="2 buổi/tuần"></div>
+          <div><label class="admin-label">Học phí</label><input id="course-form-price" class="admin-input" placeholder="2.000.000đ/tháng"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="admin-label">Trạng thái</label><select id="course-form-status" class="admin-input"><option value="available">Còn chỗ</option><option value="full">Hết chỗ</option></select></div>
+          <div class="flex items-end gap-2"><label class="toggle"><input type="checkbox" id="course-form-hidden"><span class="slider"></span></label><span class="text-sm text-gray-500">Ẩn khóa học</span></div>
+        </div>
+        <div><label class="admin-label">Thứ tự</label><input id="course-form-sort" type="number" class="admin-input" value="0"></div>
+      </div>
+      <div class="mt-5 flex items-center justify-end gap-3">
+        <button id="btn-course-cancel" class="admin-btn bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">Hủy</button>
+        <button id="btn-course-save" class="admin-btn admin-btn-primary text-sm">💾 Lưu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Form lịch học -->
+  <div id="modal-schedule" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 max-h-[90vh] overflow-y-auto">
+      <h3 id="modal-schedule-title" class="text-lg font-bold mb-4">Thêm lịch học</h3>
+      <input type="hidden" id="schedule-form-id">
+      <div class="space-y-3">
+        <div><label class="admin-label">Thuộc khóa học</label><select id="schedule-form-course" class="admin-input"><option value="">-- Chọn khóa học --</option></select></div>
+        <div><label class="admin-label">Tên lớp *</label><input id="schedule-form-name" class="admin-input" placeholder="Lớp 6A"></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="admin-label">Thời gian</label><input id="schedule-form-time" class="admin-input" placeholder="18:00 - 20:00"></div>
+          <div><label class="admin-label">Ngày học</label><input id="schedule-form-days" class="admin-input" placeholder="Thứ 2, 4, 6"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="admin-label">Trạng thái</label><select id="schedule-form-status" class="admin-input"><option value="available">Còn chỗ</option><option value="almost_full">Sắp đầy</option><option value="full">Đầy</option></select></div>
+          <div><label class="admin-label">Text trạng thái</label><input id="schedule-form-statustext" class="admin-input" placeholder="🟢 Còn chỗ"></div>
+        </div>
+        <div class="flex items-center gap-2"><label class="toggle"><input type="checkbox" id="schedule-form-hidden"><span class="slider"></span></label><span class="text-sm text-gray-500">Ẩn lịch học</span></div>
+        <div><label class="admin-label">Thứ tự</label><input id="schedule-form-sort" type="number" class="admin-input" value="0"></div>
+      </div>
+      <div class="mt-5 flex items-center justify-end gap-3">
+        <button id="btn-schedule-cancel" class="admin-btn bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">Hủy</button>
+        <button id="btn-schedule-save" class="admin-btn admin-btn-primary text-sm">💾 Lưu</button>
       </div>
     </div>
   </div>
