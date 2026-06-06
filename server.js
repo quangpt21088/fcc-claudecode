@@ -36,6 +36,9 @@ const ALLOWED_SETTINGS_KEYS = new Set([
   'title_styles',
 ]);
 
+// ─── Trust proxy (Railway/reverse proxy) ───
+app.set('trust proxy', 1);
+
 // ─── Middleware ───────────────────────────────────────────────
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
