@@ -18,7 +18,6 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 const tabBtns = document.querySelectorAll('.tab-btn');
 const tabs = {
   content: document.getElementById('tab-content'),
-  general: document.getElementById('tab-general'),
   titles: document.getElementById('tab-titles'),
   teacher: document.getElementById('tab-teacher'),
   courses: document.getElementById('tab-courses'),
@@ -92,20 +91,6 @@ async function loadData() {
     setVal('f-satisfaction-value', allSettings.satisfaction_value);
     setVal('f-satisfaction-label', allSettings.satisfaction_label);
     setVal('f-teacher-photo', allSettings.teacher_photo);
-
-    // General tab
-    setVal('f-logo-url', allSettings.logo_url);
-    setVal('f-site-name', allSettings.site_name);
-    setVal('f-site-name-accent', allSettings.site_name_accent);
-    setVal('f-approach-title', allSettings.approach_title);
-    setVal('f-why-title', allSettings.why_title);
-
-    // Logo preview
-    var logoPreview = document.getElementById('logo-preview');
-    if(logoPreview && allSettings.logo_url){
-      logoPreview.src = allSettings.logo_url;
-      logoPreview.style.display = 'block';
-    }
 
     const photoPreview = document.getElementById('teacher-photo-preview');
     if(photoPreview && allSettings.teacher_photo){
@@ -613,57 +598,6 @@ document.getElementById('btn-save-content')?.addEventListener('click', async () 
   finally { btn.textContent = '💾 Lưu nội dung'; btn.disabled = false; }
 });
 
-// ─── SAVE GENERAL (logo, site name, section titles) ──────────
-document.getElementById('btn-save-general')?.addEventListener('click', async () => {
-  const msg = document.getElementById('msg-general');
-  const btn = document.getElementById('btn-save-general');
-  btn.textContent = 'Đang lưu...'; btn.disabled = true;
-  try {
-    // Handle logo file upload
-    let logoUrl = document.getElementById('f-logo-url').value;
-    const logoFile = document.getElementById('f-logo-file');
-    if(logoFile && logoFile.files[0]){
-      const file = logoFile.files[0];
-      if(file.size > 2*1024*1024){ msg.classList.add('text-red-600'); msg.textContent = '❌ ảnh quá lớn (tối đa 2MB)'; btn.disabled=false; btn.textContent='💾 Lưu cấu hình'; return; }
-      try {
-        logoUrl = await new Promise((resolve,reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      } catch { msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi đọc file'; btn.disabled=false; btn.textContent='💾 Lưu cấu hình'; return; }
-    }
-
-    const body = {
-      logo_url: logoUrl,
-      site_name: document.getElementById('f-site-name').value,
-      site_name_accent: document.getElementById('f-site-name-accent').value,
-      approach_title: document.getElementById('f-approach-title').value,
-      why_title: document.getElementById('f-why-title').value,
-    };
-    const res = await API('/api/admin/content', { method: 'PUT', body: JSON.stringify(body) });
-    if(checkAuth(res)) return;
-    const data = await res.json().catch(() => ({}));
-    msg.classList.remove('text-red-600','text-green-600');
-    if(res.ok){ msg.classList.add('text-green-600'); msg.textContent = '✅ ' + (data.message||'Đã lưu'); }
-    else { msg.classList.add('text-red-600'); msg.textContent = '❌ ' + (data.error||'Lỗi'); }
-  } catch { msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi kết nối'; }
-  finally { btn.textContent = '💾 Lưu cấu hình'; btn.disabled = false; }
-});
-
-// Logo file input preview
-document.getElementById('f-logo-file')?.addEventListener('change', function(){
-  if(this.files[0]){
-    const reader = new FileReader();
-    reader.onload = function(e){
-      const preview = document.getElementById('logo-preview');
-      if(preview){ preview.src = e.target.result; preview.style.display = 'block'; }
-    };
-    reader.readAsDataURL(this.files[0]);
-  }
-});
-
 document.getElementById('btn-save-title-style')?.addEventListener('click', async () => {
   const msg = document.getElementById('msg-titles');
   const key = titleSelector.value;
@@ -684,7 +618,7 @@ document.getElementById('btn-save-title-style')?.addEventListener('click', async
   updateSavedStylesList();
 });
 
-document.getElementById('btn-reset-title-style')?.addEventListener('click', async () => {
+document.getElementById('btn-reset-title-style')?.addEventListener('click', () => {
   const key = titleSelector.value;
   delete titleStyles[key];
   titleFont.value = 'Inter'; titleSize.value = 48; titleWeight.value = 700;
@@ -693,13 +627,8 @@ document.getElementById('btn-reset-title-style')?.addEventListener('click', asyn
   applyStyleToPreview();
   updateSavedStylesList();
   const msg = document.getElementById('msg-titles');
-  // Lưu lên server để F5 vẫn giữ trạng thái reset
-  try {
-    const res = await API('/api/admin/title-styles', { method: 'PUT', body: JSON.stringify(titleStyles) });
-    if(checkAuth(res)) return;
-    if(res.ok){ msg.classList.remove('text-red-600'); msg.classList.add('text-green-600'); msg.textContent = '🔄 Đã reset'; }
-    else { msg.classList.remove('text-green-600'); msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi lưu'; }
-  } catch { msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi kết nối'; }
+  msg.classList.remove('text-red-600'); msg.classList.add('text-green-600');
+  msg.textContent = '🔄 Đã reset';
 });
 
 document.getElementById('btn-save-teacher')?.addEventListener('click', async () => {

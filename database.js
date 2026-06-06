@@ -137,11 +137,8 @@ async function initDB() {
 
     // ─── Seed Settings ───
     const defaultSettings = [
-      ['logo_url', ''],
       ['site_name', 'Ngữ Văn'],
       ['site_name_accent', 'THCS'],
-      ['approach_title', 'Chương Trình Học'],
-      ['why_title', 'Tại Sao Phụ Huynh Tin Tưởng?'],
       ['hero_badge', 'Đang nhận học viên mới'],
       ['hero_title1', 'Khơi nguồn tư duy'],
       ['hero_title2', 'Bứt phá điểm số'],
