@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng nhập Admin — Lớp Văn Hoàn</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-100 flex items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm">
+    <h1 class="text-2xl font-bold text-center mb-6">🔐 Đăng nhập Admin</h1>
+    <form id="login-form" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Tên đăng nhập</label>
+        <input name="username" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Mật khẩu</label>
+        <input name="password" type="password" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+      </div>
+      <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
+        Đăng nhập
+      </button>
+      <div id="login-msg" class="text-center text-sm font-medium hidden"></div>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const msg = document.getElementById('login-msg');
+      const btn = form.querySelector('button');
+      btn.textContent = 'Đang đăng nhập...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: form.username.value.trim(),
+            password: form.password.value,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok && data.token) {
+          localStorage.setItem('admin_token', data.token);
+          window.location.href = 'dashboard.html';
+        } else {
+          msg.classList.remove('hidden', 'text-green-600');
+          msg.classList.add('text-red-600');
+          msg.textContent = '❌ ' + (data.error || 'Đăng nhập thất bại');
+        }
+      } catch {
+        msg.classList.remove('hidden');
+        msg.classList.add('text-red-600');
+        msg.textContent = '❌ Không thể kết nối server';
+      } finally {
+        btn.textContent = 'Đăng nhập';
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
