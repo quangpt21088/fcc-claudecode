@@ -125,6 +125,16 @@ async function initDB() {
     await client.query(`ALTER TABLE approach ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
     await client.query(`ALTER TABLE why_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
 
+    // Fix defaults for columns that already exist but lack DEFAULT
+    await client.query(`ALTER TABLE courses ALTER COLUMN short_name SET DEFAULT '';`);
+    await client.query(`ALTER TABLE courses ALTER COLUMN emoji SET DEFAULT '📖';`);
+    await client.query(`ALTER TABLE courses ALTER COLUMN color SET DEFAULT 'blue';`);
+    await client.query(`ALTER TABLE courses ALTER COLUMN sub SET DEFAULT '';`);
+    await client.query(`ALTER TABLE courses ALTER COLUMN description SET DEFAULT '';`);
+    await client.query(`ALTER TABLE courses ALTER COLUMN duration SET DEFAULT '2h/buổi';`);
+    await client.query(`ALTER TABLE courses ALTER COLUMN max_students SET DEFAULT 'Tối đa 10';`);
+    await client.query(`ALTER TABLE courses ALTER COLUMN sessions SET DEFAULT '2 buổi/tuần';`);
+
     // ─── Seed Settings ───
     const defaultSettings = [
       ['site_name', 'Ngữ Văn'],
