@@ -609,15 +609,23 @@ app.post('/api/admin/change-password', auth, async (req, res) => {
     if (newPassword.length < 6) {
       return res.status(400).json({ error: 'Mật khẩu mới phải tối thiểu 6 ký tự' });
     }
+    // Do NOT sanitize passwords — sanitizeStr strips special chars like < > which may be intentional in passwords
 
+    console.log('CHANGE PASSWORD: adminId=', req.admin.id, 'username=', req.admin.username);
     const { rows } = await pool.query('SELECT * FROM admins WHERE id = $1', [req.admin.id]);
+    console.log('CHANGE PASSWORD: found rows=', rows.length);
+    if (rows.length === 0) {
+      return res.status(401).json({ error: 'Admin not found' });
+    }
     const match = await bcrypt.compare(currentPassword, rows[0].password_hash);
+    console.log('CHANGE PASSWORD: currentPassword match=', match);
     if (!match) {
       return res.status(401).json({ error: 'Mật khẩu hiện tại không đúng' });
     }
 
     const hash = await bcrypt.hash(newPassword, 10);
-    await pool.query('UPDATE admins SET password_hash = $1 WHERE id = $2', [hash, req.admin.id]);
+    const updateResult = await pool.query('UPDATE admins SET password_hash = $1 WHERE id = $2', [hash, req.admin.id]);
+    console.log('CHANGE PASSWORD: update result rowCount=', updateResult.rowCount);
     res.json({ ok: true, message: 'Đã đổi mật khẩu' });
   } catch (err) {
     console.error('POST /api/admin/change-password error:', err.message);
