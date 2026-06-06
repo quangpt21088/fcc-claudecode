@@ -44,6 +44,7 @@
       <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="courses">📚 Khóa học</button>
       <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="schedule">📅 Lịch học</button>
       <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="registrations">📋 Đăng ký</button>
+      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="password">🔐 Đổi mật khẩu</button>
     </div>
   </div>
 
@@ -397,6 +398,31 @@
           </thead>
           <tbody id="registrations-list"></tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 7: ĐỔI MẬT KHẨU -->
+  <div id="tab-password" class="max-w-6xl mx-auto px-4 mt-6 hidden">
+    <div class="bg-white rounded-xl shadow p-6 max-w-md mx-auto">
+      <h2 class="text-lg font-bold mb-4">🔐 Đổi Mật Khẩu Admin</h2>
+      <p class="text-sm text-gray-500 mb-4">Nhập mật khẩu hiện tại và mật khẩu mới để thay đổi.</p>
+      <div class="space-y-4">
+        <div>
+          <label class="admin-label">Mật khẩu hiện tại</label>
+          <input type="password" id="pwd-current" class="admin-input" placeholder="Nhập mật khẩu hiện tại">
+        </div>
+        <div>
+          <label class="admin-label">Mật khẩu mới</label>
+          <input type="password" id="pwd-new" class="admin-input" placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)">
+        </div>
+        <div>
+          <label class="admin-label">Xác nhận mật khẩu mới</label>
+          <input type="password" id="pwd-confirm" class="admin-input" placeholder="Nhập lại mật khẩu mới">
+        </div>
+        <p id="pwd-error" class="text-red-500 text-sm hidden"></p>
+        <p id="pwd-success" class="text-green-600 text-sm hidden"></p>
+        <button id="btn-change-password" class="admin-btn admin-btn-primary w-full">🔑 Đổi mật khẩu</button>
       </div>
     </div>
   </div>

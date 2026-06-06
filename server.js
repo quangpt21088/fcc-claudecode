@@ -473,6 +473,7 @@ app.put('/api/admin/title-styles', auth, async (req, res) => {
 app.put('/api/admin/courses/:id', auth, async (req, res) => {
   try {
     const { name, short_name, shortName, emoji, color, sub, description, features, duration, max_students, maxStudents, sessions, price, status, hidden, sort_order } = req.body;
+    console.log('PUT /api/admin/courses/:id body:', JSON.stringify({ id: req.params.id, name, hidden, status, sort_order }));
     await pool.query(
       `UPDATE courses SET
         name = $1, short_name = $2, emoji = $3, color = $4,
@@ -488,8 +489,8 @@ app.put('/api/admin/courses/:id', auth, async (req, res) => {
     invalidateCache();
     res.json({ ok: true, message: 'Đã cập nhật khóa học' });
   } catch (err) {
-    console.error('PUT /api/admin/courses/:id error:', err.message);
-    res.status(500).json({ error: 'Lỗi server' });
+    console.error('PUT /api/admin/courses/:id error:', err.message, err.stack);
+    res.status(500).json({ error: 'Lỗi server: ' + err.message });
   }
 });
 
@@ -500,6 +501,7 @@ app.post('/api/admin/courses', auth, async (req, res) => {
     if (!name) {
       return res.status(400).json({ error: 'Tên khóa học là bắt buộc' });
     }
+    console.log('POST /api/admin/courses body:', JSON.stringify({ name, status, sort_order }));
     const { rows } = await pool.query(
       `INSERT INTO courses (name, short_name, emoji, color, sub, description, features, duration, max_students, sessions, price, status, sort_order)
        VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, $13)
@@ -512,8 +514,8 @@ app.post('/api/admin/courses', auth, async (req, res) => {
     invalidateCache();
     res.json({ ok: true, message: 'Đã thêm khóa học mới', course: rows[0] });
   } catch (err) {
-    console.error('POST /api/admin/courses error:', err.message);
-    res.status(500).json({ error: 'Lỗi server' });
+    console.error('POST /api/admin/courses error:', err.message, err.stack);
+    res.status(500).json({ error: 'Lỗi server: ' + err.message });
   }
 });
 

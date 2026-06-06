@@ -23,6 +23,7 @@ const tabs = {
   courses: document.getElementById('tab-courses'),
   schedule: document.getElementById('tab-schedule'),
   registrations: document.getElementById('tab-registrations'),
+  password: document.getElementById('tab-password'),
 };
 tabBtns.forEach(btn => {
   btn.addEventListener('click', () => {
@@ -724,6 +725,56 @@ async function loadRegistrations() {
     });
   } catch(err){ console.error('Lỗi tải đăng ký:', err); }
 }
+
+// ─── Đổi mật khẩu ─────────────────────────────────────────────
+document.getElementById('btn-change-password')?.addEventListener('click', async () => {
+  const current = document.getElementById('pwd-current').value;
+  const newPwd = document.getElementById('pwd-new').value;
+  const confirm = document.getElementById('pwd-confirm').value;
+  const errorEl = document.getElementById('pwd-error');
+  const successEl = document.getElementById('pwd-success');
+
+  errorEl.classList.add('hidden');
+  successEl.classList.add('hidden');
+
+  if (!current || !newPwd || !confirm) {
+    errorEl.textContent = '❌ Vui lòng điền đầy đủ thông tin';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+  if (newPwd.length < 6) {
+    errorEl.textContent = '❌ Mật khẩu mới phải tối thiểu 6 ký tự';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+  if (newPwd !== confirm) {
+    errorEl.textContent = '❌ Mật khẩu xác nhận không khớp';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  try {
+    const res = await API('/api/admin/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword: current, newPassword: newPwd }),
+    });
+    if (checkAuth(res)) return;
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      successEl.textContent = '✅ ' + (data.message || 'Đã đổi mật khẩu thành công');
+      successEl.classList.remove('hidden');
+      document.getElementById('pwd-current').value = '';
+      document.getElementById('pwd-new').value = '';
+      document.getElementById('pwd-confirm').value = '';
+    } else {
+      errorEl.textContent = '❌ ' + (data.error || 'Lỗi');
+      errorEl.classList.remove('hidden');
+    }
+  } catch (e) {
+    errorEl.textContent = '❌ Lỗi kết nối';
+    errorEl.classList.remove('hidden');
+  }
+});
 
 // ─── Init ─────────────────────────────────────────────────────
 loadData();
