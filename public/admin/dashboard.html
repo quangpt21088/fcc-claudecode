@@ -39,6 +39,7 @@
   <div class="max-w-6xl mx-auto px-4 mt-6">
     <div class="flex gap-2 flex-wrap">
       <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="content">📝 Nội dung</button>
+      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="general">⚙️ Cấu hình</button>
       <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="titles">🎨 Tiêu đề</button>
       <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="teacher">👨‍🏫 Giáo viên</button>
       <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="courses">📚 Khóa học</button>
@@ -133,6 +134,61 @@
       <div class="mt-4 flex items-center gap-4">
         <button id="btn-save-content" class="admin-btn admin-btn-primary">💾 Lưu nội dung</button>
         <span id="msg-content" class="text-sm font-medium"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 1.5: CẤU HÌNH CHUNG -->
+  <div id="tab-general" class="max-w-6xl mx-auto px-4 mt-6 hidden">
+    <div class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-lg font-bold mb-4">⚙️ Cấu hình Chung</h2>
+
+      <!-- Logo -->
+      <div class="admin-section">
+        <h3 class="font-bold text-sm mb-2">🖼️ Logo</h3>
+        <p class="text-xs text-gray-500 mb-2">Tải ảnh logo lên hoặc dán URL. Khuyến nghị: 100x100px, PNG nền trong suốt.</p>
+        <div class="flex gap-4 items-start">
+          <div class="flex-1">
+            <label class="admin-label">URL Logo</label>
+            <input id="f-logo-url" class="admin-input" placeholder="https://... hoặc data:image/...">
+          </div>
+          <div class="shrink-0">
+            <label class="admin-label">Hoặc upload</label>
+            <input id="f-logo-file" type="file" accept="image/*" class="admin-input">
+          </div>
+        </div>
+        <div class="mt-2">
+          <img id="logo-preview" src="" alt="Logo Preview" class="w-20 h-20 object-contain rounded-lg border bg-gray-50" style="display:none"/>
+        </div>
+      </div>
+
+      <!-- Site Name -->
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="admin-label">Tên thương hiệu (Header & Footer)</label>
+          <input id="f-site-name" class="admin-input" placeholder="Ngữ Văn">
+        </div>
+        <div>
+          <label class="admin-label">Phần nhấn mạnh</label>
+          <input id="f-site-name-accent" class="admin-input" placeholder="THCS">
+        </div>
+      </div>
+
+      <!-- Section Titles -->
+      <div class="mt-4 grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="admin-label">Tiêu đề Phương pháp</label>
+          <input id="f-approach-title" class="admin-input" placeholder="Chương Trình Học">
+        </div>
+        <div>
+          <label class="admin-label">Tiêu đề Tại sao</label>
+          <input id="f-why-title" class="admin-input" placeholder="Tại Sao Phụ Huynh Tin Tưởng?">
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center gap-4">
+        <button id="btn-save-general" class="admin-btn admin-btn-primary">💾 Lưu cấu hình</button>
+        <span id="msg-general" class="text-sm font-medium"></span>
       </div>
     </div>
   </div>
