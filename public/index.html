@@ -176,7 +176,7 @@
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="text-center mb-16 reveal">
       <div class="inline-flex items-center gap-2 px-4 py-2 bg-brand-500/10 rounded-full mb-4"><span class="text-sm font-semibold text-brand-300">Phương pháp</span></div>
-      <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-4">Chương Trình Học</h2>
+      <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-4" id="approach-title">Chương Trình Học</h2>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8" id="approach-grid">
       <!-- JS render -->
@@ -187,7 +187,7 @@
 <!-- ==================== WHY ==================== -->
 <section class="py-20 lg:py-28 bg-brand-800">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <h2 class="text-3xl sm:text-4xl font-black text-white text-center mb-16 reveal">Tại Sao Phụ Huynh Tin Tưởng?</h2>
+    <h2 class="text-3xl sm:text-4xl font-black text-white text-center mb-16 reveal" id="why-title">Tại Sao Phụ Huynh Tin Tưởng?</h2>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-6" id="why-grid">
       <!-- JS render -->
     </div>
@@ -352,6 +352,24 @@
     var sel = document.getElementById('form-class-select');
     if(sel && d.courses){
       sel.innerHTML = '<option value="" disabled selected>-- Chọn lớp --</option>'+d.courses.map(function(c){ return '<option value="'+esc(c.name)+'">'+esc(c.name)+'</option>'; }).join('');
+    }
+
+    // Apply title styles
+    if (d.titleStyles && typeof d.titleStyles === 'object') {
+      Object.keys(d.titleStyles).forEach(function(sel) {
+        var styleObj = d.titleStyles[sel];
+        if (!styleObj) return;
+        // sel format: "hero-title1", "courses-section-title", etc.
+        var el = document.getElementById(sel);
+        if (el) {
+          if (styleObj.fontFamily) el.style.fontFamily = styleObj.fontFamily;
+          if (styleObj.fontSize) el.style.fontSize = styleObj.fontSize + 'px';
+          if (styleObj.fontWeight) el.style.fontWeight = styleObj.fontWeight;
+          if (styleObj.color) el.style.color = styleObj.color;
+          if (styleObj.lineHeight) el.style.lineHeight = styleObj.lineHeight;
+          if (styleObj.letterSpacing) el.style.letterSpacing = styleObj.letterSpacing;
+        }
+      });
     }
 
     setTimeout(initReveal, 100);
