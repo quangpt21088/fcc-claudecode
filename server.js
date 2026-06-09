@@ -9,13 +9,20 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ─── JWT Secret — auto-generate if missing ───
+// ─── JWT Secret — fail fast in production if missing, warn in dev ───
+// Keep at module so all routes and middleware share the same value.
 let JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  if (process.env.NODE_ENV === 'production') {
+    // A random restart-busting secret + no recovery path = bad ops experience, and
+    // auto-generated secrets in prod break client tokens on every deploy.
+    console.error('❌ FATAL: JWT_SECRET is missing or too weak in production. Set a permanent secret in .env.');
+    process.exit(1);
+  }
   const crypto = require('crypto');
   JWT_SECRET = crypto.randomBytes(64).toString('hex');
-  console.warn('⚠️  JWT_SECRET was missing or too weak. A random secret has been generated for this session.');
-  console.warn('⚠️  Set a permanent JWT_SECRET in .env for production to avoid token invalidation on restart.');
+  console.warn('⚠️  JWT_SECRET was missing or weak. A random secret was generated for this session (development only).');
+  console.warn('⚠️  Set a permanent JWT_SECRET in .env to avoid token invalidation on restart.');
 }
 
 // ─── XSS Sanitizer — strip all HTML tags from string values ───
@@ -356,10 +363,20 @@ app.get('/api/admin/schedule', auth, async (req, res) => {
 // ─── PUT /api/admin/schedule — Cập nhật lịch học ─────────────
 app.put('/api/admin/schedule/:id', auth, async (req, res) => {
   try {
+    const numericId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(numericId) || numericId <= 0) {
+      return res.status(400).json({ error: 'ID không hợp lệ' });
+    }
     const { class_name, className, time_slot, timeSlot, days, status, status_text, statusText, hidden, course_id } = req.body;
+    const cleanClass = sanitizeStr(class_name || className || '');
+    const cleanTime = sanitizeStr(time_slot || timeSlot || '');
+    const cleanDays = sanitizeStr(days || '');
+    const cleanStatus = sanitizeStr(status || 'available');
+    const cleanStatusText = sanitizeStr(status_text || statusText || '🟢 Còn chỗ');
+    const cleanCourseId = course_id ? parseInt(course_id) : null;
     await pool.query(
       `UPDATE schedule SET course_id = $1, class_name = $2, time_slot = $3, days = $4, status = $5, status_text = $6, hidden = $7, updated_at = NOW() WHERE id = $8`,
-      [course_id || null, class_name || className, time_slot || timeSlot, days, status, status_text || statusText, hidden, req.params.id]
+      [cleanCourseId, cleanClass, cleanTime, cleanDays, cleanStatus, cleanStatusText, hidden || false, numericId]
     );
     invalidateCache();
     res.json({ ok: true, message: 'Đã cập nhật lịch học' });
@@ -484,8 +501,17 @@ app.put('/api/admin/title-styles', auth, async (req, res) => {
 // ─── PUT /api/admin/courses/:id — Cập nhật 1 khóa học ────────
 app.put('/api/admin/courses/:id', auth, async (req, res) => {
   try {
+    const numericId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(numericId) || numericId <= 0) {
+      return res.status(400).json({ error: 'ID không hợp lệ' });
+    }
     const { name, short_name, shortName, emoji, color, sub, description, features, duration, max_students, maxStudents, sessions, price, status, hidden, sort_order } = req.body;
-    console.log('PUT /api/admin/courses/:id body:', JSON.stringify({ id: req.params.id, name, hidden, status, sort_order }));
+    if (process.env.DEBUG === 'true') console.log('PUT /api/admin/courses/:id body:', JSON.stringify({ id: numericId, name, hidden, status, sort_order }));
+    const ALLOWED_STATUSES = new Set(['available', 'almost_full', 'full', 'inactive']);
+    const ALLOWED_COLORS = new Set(['blue', 'green', 'purple', 'orange', 'red', 'pink', 'yellow', 'gray']);
+    const cleanStatus = ALLOWED_STATUSES.has(status) ? status : 'available';
+    const cleanColor = ALLOWED_COLORS.has(color) ? color : 'blue';
+    const cleanSort = Number.isInteger(parseInt(sort_order)) ? parseInt(sort_order) : 0;
     await pool.query(
       `UPDATE courses SET
         name = $1, short_name = $2, emoji = $3, color = $4,
@@ -493,16 +519,16 @@ app.put('/api/admin/courses/:id', auth, async (req, res) => {
         duration = $8, max_students = $9, sessions = $10,
         price = $11, status = $12, hidden = $13, sort_order = $14, updated_at = NOW()
        WHERE id = $15`,
-      [sanitizeStr(name), sanitizeStr(short_name || shortName), sanitizeStr(emoji), color,
+      [sanitizeStr(name), sanitizeStr(short_name || shortName), sanitizeStr(emoji), cleanColor,
        sanitizeStr(sub), sanitizeStr(description),
        JSON.stringify(features || []), sanitizeStr(duration), sanitizeStr(max_students || maxStudents),
-       sanitizeStr(sessions), sanitizeStr(price), status, hidden || false, sort_order || 0, req.params.id]
+       sanitizeStr(sessions), sanitizeStr(price), cleanStatus, hidden || false, cleanSort, numericId]
     );
     invalidateCache();
     res.json({ ok: true, message: 'Đã cập nhật khóa học' });
   } catch (err) {
     console.error('PUT /api/admin/courses/:id error:', err.message, err.stack);
-    res.status(500).json({ error: 'Lỗi server: ' + err.message });
+    res.status(500).json({ error: 'Lỗi server' });
   }
 });
 
@@ -513,21 +539,26 @@ app.post('/api/admin/courses', auth, async (req, res) => {
     if (!name) {
       return res.status(400).json({ error: 'Tên khóa học là bắt buộc' });
     }
-    console.log('POST /api/admin/courses body:', JSON.stringify({ name, status, sort_order }));
+    if (process.env.DEBUG === 'true') console.log('POST /api/admin/courses body:', JSON.stringify({ name, status, sort_order }));
+    const ALLOWED_STATUSES = new Set(['available', 'almost_full', 'full', 'inactive']);
+    const ALLOWED_COLORS = new Set(['blue', 'green', 'purple', 'orange', 'red', 'pink', 'yellow', 'gray']);
+    const cleanStatus = ALLOWED_STATUSES.has(status) ? status : 'available';
+    const cleanColor = ALLOWED_COLORS.has(color) ? color : 'blue';
+    const cleanSort = Number.isInteger(parseInt(sort_order)) ? parseInt(sort_order) : 0;
     const { rows } = await pool.query(
       `INSERT INTO courses (name, short_name, emoji, color, sub, description, features, duration, max_students, sessions, price, status, sort_order)
        VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
-      [sanitizeStr(name), sanitizeStr(short_name || shortName || ''), sanitizeStr(emoji || '📖'), color || 'blue',
+      [sanitizeStr(name), sanitizeStr(short_name || shortName || ''), sanitizeStr(emoji || '📖'), cleanColor,
        sanitizeStr(sub || ''), sanitizeStr(description || desc || ''),
        JSON.stringify(features || []), sanitizeStr(duration || '2h/buổi'), sanitizeStr(max_students || maxStudents || 'Tối đa 10'),
-       sanitizeStr(sessions || '2 buổi/tuần'), sanitizeStr(price || ''), status || 'available', sort_order || 0]
+       sanitizeStr(sessions || '2 buổi/tuần'), sanitizeStr(price || ''), cleanStatus, cleanSort]
     );
     invalidateCache();
     res.json({ ok: true, message: 'Đã thêm khóa học mới', course: rows[0] });
   } catch (err) {
     console.error('POST /api/admin/courses error:', err.message, err.stack);
-    res.status(500).json({ error: 'Lỗi server: ' + err.message });
+    res.status(500).json({ error: 'Lỗi server' });
   }
 });
 
@@ -538,12 +569,20 @@ app.post('/api/admin/schedule', auth, async (req, res) => {
     if (!class_name && !className) {
       return res.status(400).json({ error: 'Tên lớp là bắt buộc' });
     }
+    // Sanitize / whitelist inputs
+    const cleanClass = sanitizeStr(class_name || className || '');
+    const cleanTime = sanitizeStr(time_slot || timeSlot || '');
+    const cleanDays = sanitizeStr(days || '');
+    const cleanStatus = sanitizeStr(status || 'available');
+    const cleanStatusText = sanitizeStr(status_text || statusText || '🟢 Còn chỗ');
+    const cleanSort = Number.isInteger(parseInt(sort_order)) ? parseInt(sort_order) : 0;
+    const cleanCourseId = course_id ? parseInt(course_id) : null;
+
     const { rows } = await pool.query(
       `INSERT INTO schedule (course_id, class_name, time_slot, days, status, status_text, sort_order)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [course_id || null, class_name || className, time_slot || timeSlot || '', days || '', status || 'available',
-       status_text || statusText || '🟢 Còn chỗ', sort_order || 0]
+      [cleanCourseId, cleanClass, cleanTime, cleanDays, cleanStatus, cleanStatusText, cleanSort]
     );
     invalidateCache();
     res.json({ ok: true, message: 'Đã thêm lịch học mới', schedule: rows[0] });
@@ -556,7 +595,11 @@ app.post('/api/admin/schedule', auth, async (req, res) => {
 // ─── DELETE /api/admin/courses/:id — Xóa khóa học (cascade xóa schedule) ──
 app.delete('/api/admin/courses/:id', auth, async (req, res) => {
   try {
-    await pool.query('DELETE FROM courses WHERE id = $1', [req.params.id]);
+    const numericId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(numericId) || numericId <= 0) {
+      return res.status(400).json({ error: 'ID không hợp lệ' });
+    }
+    await pool.query('DELETE FROM courses WHERE id = $1', [numericId]);
     invalidateCache();
     res.json({ ok: true, message: 'Đã xóa khóa học' });
   } catch (err) {
@@ -568,7 +611,11 @@ app.delete('/api/admin/courses/:id', auth, async (req, res) => {
 // ─── DELETE /api/admin/schedule/:id — Xóa lịch học ────────────
 app.delete('/api/admin/schedule/:id', auth, async (req, res) => {
   try {
-    await pool.query('DELETE FROM schedule WHERE id = $1', [req.params.id]);
+    const numericId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(numericId) || numericId <= 0) {
+      return res.status(400).json({ error: 'ID không hợp lệ' });
+    }
+    await pool.query('DELETE FROM schedule WHERE id = $1', [numericId]);
     invalidateCache();
     res.json({ ok: true, message: 'Đã xóa lịch học' });
   } catch (err) {
@@ -593,13 +640,17 @@ app.get('/api/admin/registrations', auth, async (req, res) => {
 // ─── PUT /api/admin/registrations/:id — Cập nhật trạng thái ──
 app.put('/api/admin/registrations/:id', auth, async (req, res) => {
   try {
+    const numericId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(numericId) || numericId <= 0) {
+      return res.status(400).json({ error: 'ID không hợp lệ' });
+    }
     const { status } = req.body;
     if (!['pending', 'contacted'].includes(status)) {
       return res.status(400).json({ error: 'Trạng thái không hợp lệ' });
     }
     await pool.query(
       'UPDATE registrations SET status = $1 WHERE id = $2',
-      [status, req.params.id]
+      [status, numericId]
     );
     res.json({ ok: true });
   } catch (err) {
@@ -620,21 +671,19 @@ app.post('/api/admin/change-password', auth, async (req, res) => {
     }
     // Do NOT sanitize passwords — sanitizeStr strips special chars like < > which may be intentional in passwords
 
-    console.log('CHANGE PASSWORD: adminId=', req.admin.id, 'username=', req.admin.username);
+    if (process.env.NODE_ENV !== 'production') console.log('CHANGE PASSWORD: adminId=', req.admin.id, 'username=', req.admin.username);
     const { rows } = await pool.query('SELECT * FROM admins WHERE id = $1', [req.admin.id]);
-    console.log('CHANGE PASSWORD: found rows=', rows.length);
+    if (process.env.NODE_ENV !== 'production') console.log('CHANGE PASSWORD: found rows=', rows.length);
     if (rows.length === 0) {
       return res.status(401).json({ error: 'Admin not found' });
     }
     const match = await bcrypt.compare(currentPassword, rows[0].password_hash);
-    console.log('CHANGE PASSWORD: currentPassword match=', match);
     if (!match) {
       return res.status(401).json({ error: 'Mật khẩu hiện tại không đúng' });
     }
 
     const hash = await bcrypt.hash(newPassword, 10);
-    const updateResult = await pool.query('UPDATE admins SET password_hash = $1 WHERE id = $2', [hash, req.admin.id]);
-    console.log('CHANGE PASSWORD: update result rowCount=', updateResult.rowCount);
+    await pool.query('UPDATE admins SET password_hash = $1 WHERE id = $2', [hash, req.admin.id]);
     res.json({ ok: true, message: 'Đã đổi mật khẩu' });
   } catch (err) {
     console.error('POST /api/admin/change-password error:', err.message);

@@ -1,6 +1,6 @@
 // ─── Auth check ───────────────────────────────────────────────
 const TOKEN = localStorage.getItem('admin_token');
-if (!TOKEN) { window.location.href = 'login.html'; }
+if (!TOKEN) { window.location.href = 'login.html'; throw new Error('NO_TOKEN'); }
 
 const API = (path, opts = {}) =>
   fetch(path, {
@@ -64,6 +64,7 @@ let titleStyles = {};
 async function loadData() {
   try {
     const settingsRes = await API('/api/admin/settings');
+    if (checkAuth(settingsRes)) return;
     allSettings = await settingsRes.json();
 
     const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val||''; };
@@ -115,11 +116,13 @@ async function loadData() {
 
     // Load courses
     const coursesRes = await API('/api/admin/courses');
+    if (checkAuth(coursesRes)) return;
     allCourses = await coursesRes.json() || [];
     renderCourses();
 
     // Load schedule
     const schedRes = await API('/api/admin/schedule');
+    if (checkAuth(schedRes)) return;
     allSchedule = await schedRes.json() || [];
     renderSchedule();
 
@@ -766,6 +769,7 @@ document.getElementById('modal-schedule')?.addEventListener('click', (e) => { if
 async function loadRegistrations() {
   try {
     const res = await API('/api/admin/registrations');
+    if (checkAuth(res)) return;
     const data = await res.json();
     const tbody = document.getElementById('registrations-list');
     if(!Array.isArray(data) || data.length === 0){ tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-gray-400">Chưa có đăng ký nào</td></tr>'; return; }
@@ -790,6 +794,7 @@ async function loadRegistrations() {
         const newStatus = btn.dataset.status==='pending' ? 'contacted' : 'pending';
         try {
           const res = await API(`/api/admin/registrations/${btn.dataset.id}`, { method:'PUT', body: JSON.stringify({status:newStatus}) });
+          if (checkAuth(res)) return;
           if(res.ok){ btn.dataset.status=newStatus; btn.className=`status-btn px-3 py-1 rounded-full text-xs font-semibold ${newStatus==='contacted'?'bg-green-100 text-green-700':'bg-yellow-100 text-yellow-700'}`; btn.textContent=newStatus==='contacted'?'✅ Đã gọi':'⏳ Chưa liên hệ'; }
         } catch(e){ console.error(e); }
       });

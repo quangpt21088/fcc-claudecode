@@ -456,7 +456,12 @@
       var fmt = digits;
       if(digits.length>7) fmt = digits.slice(0,4)+' '+digits.slice(4,7)+' '+digits.slice(7);
       else if(digits.length>4) fmt = digits.slice(0,4)+' '+digits.slice(4);
+      // Preserve cursor position after formatting
+      var caret = e.target.selectionStart;
+      var diff = (e.target.value || '').length - (e.target.value || '').replace(/\D/g,'').length;
       e.target.value = fmt;
+      var newCaret = Math.max(0, caret - diff);
+      e.target.setSelectionRange(newCaret, newCaret);
       if(digits.length===10){ phoneError.classList.add('hidden'); phoneInput.classList.remove('border-red-500'); }
     });
 

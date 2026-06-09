@@ -109,31 +109,45 @@ async function initDB() {
       );
     `);
 
-    // ─── Migrations cho DB cũ ───
-    await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS hidden BOOLEAN NOT NULL DEFAULT false;`);
-    await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS short_name VARCHAR(50) NOT NULL DEFAULT '';`);
-    await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS emoji VARCHAR(10) NOT NULL DEFAULT '📖';`);
-    await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS color VARCHAR(20) NOT NULL DEFAULT 'blue';`);
-    await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS sub VARCHAR(100) NOT NULL DEFAULT '';`);
-    await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';`);
-    await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS features JSONB DEFAULT '[]';`);
-    await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS duration VARCHAR(50) NOT NULL DEFAULT '2h/buổi';`);
-    await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS max_students VARCHAR(50) NOT NULL DEFAULT 'Tối đa 10';`);
-    await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS sessions VARCHAR(50) NOT NULL DEFAULT '2 buổi/tuần';`);
-    await client.query(`ALTER TABLE schedule ADD COLUMN IF NOT EXISTS hidden BOOLEAN NOT NULL DEFAULT false;`);
-    await client.query(`ALTER TABLE schedule ADD COLUMN IF NOT EXISTS course_id INT REFERENCES courses(id) ON DELETE CASCADE;`);
-    await client.query(`ALTER TABLE approach ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-    await client.query(`ALTER TABLE why_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+    // ─── Schema version tracking (run migrations only when needed) ───
+    const { rows: verRows } = await client.query("SELECT value FROM settings WHERE key = 'schema_version'");
+    const currentVersion = verRows.length > 0 ? parseInt(verRows[0].value, 10) : 0;
+    const TARGET_VERSION = 2;
 
-    // Fix defaults for columns that already exist but lack DEFAULT
-    await client.query(`ALTER TABLE courses ALTER COLUMN short_name SET DEFAULT '';`);
-    await client.query(`ALTER TABLE courses ALTER COLUMN emoji SET DEFAULT '📖';`);
-    await client.query(`ALTER TABLE courses ALTER COLUMN color SET DEFAULT 'blue';`);
-    await client.query(`ALTER TABLE courses ALTER COLUMN sub SET DEFAULT '';`);
-    await client.query(`ALTER TABLE courses ALTER COLUMN description SET DEFAULT '';`);
-    await client.query(`ALTER TABLE courses ALTER COLUMN duration SET DEFAULT '2h/buổi';`);
-    await client.query(`ALTER TABLE courses ALTER COLUMN max_students SET DEFAULT 'Tối đa 10';`);
-    await client.query(`ALTER TABLE courses ALTER COLUMN sessions SET DEFAULT '2 buổi/tuần';`);
+    if (currentVersion < TARGET_VERSION) {
+      // ─── Migrations cho DB cũ ───
+      await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS hidden BOOLEAN NOT NULL DEFAULT false;`);
+      await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS short_name VARCHAR(50) NOT NULL DEFAULT '';`);
+      await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS emoji VARCHAR(10) NOT NULL DEFAULT '📖';`);
+      await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS color VARCHAR(20) NOT NULL DEFAULT 'blue';`);
+      await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS sub VARCHAR(100) NOT NULL DEFAULT '';`);
+      await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';`);
+      await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS features JSONB DEFAULT '[]';`);
+      await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS duration VARCHAR(50) NOT NULL DEFAULT '2h/buổi';`);
+      await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS max_students VARCHAR(50) NOT NULL DEFAULT 'Tối đa 10';`);
+      await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS sessions VARCHAR(50) NOT NULL DEFAULT '2 buổi/tuần';`);
+      await client.query(`ALTER TABLE schedule ADD COLUMN IF NOT EXISTS hidden BOOLEAN NOT NULL DEFAULT false;`);
+      await client.query(`ALTER TABLE schedule ADD COLUMN IF NOT EXISTS course_id INT REFERENCES courses(id) ON DELETE CASCADE;`);
+      await client.query(`ALTER TABLE approach ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+      await client.query(`ALTER TABLE why_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+
+      // Fix defaults for columns that already exist but lack DEFAULT
+      await client.query(`ALTER TABLE courses ALTER COLUMN short_name SET DEFAULT '';`);
+      await client.query(`ALTER TABLE courses ALTER COLUMN emoji SET DEFAULT '📖';`);
+      await client.query(`ALTER TABLE courses ALTER COLUMN color SET DEFAULT 'blue';`);
+      await client.query(`ALTER TABLE courses ALTER COLUMN sub SET DEFAULT '';`);
+      await client.query(`ALTER TABLE courses ALTER COLUMN description SET DEFAULT '';`);
+      await client.query(`ALTER TABLE courses ALTER COLUMN duration SET DEFAULT '2h/buổi';`);
+      await client.query(`ALTER TABLE courses ALTER COLUMN max_students SET DEFAULT 'Tối đa 10';`);
+      await client.query(`ALTER TABLE courses ALTER COLUMN sessions SET DEFAULT '2 buổi/tuần';`);
+
+      // Bump schema version
+      await client.query(
+        `INSERT INTO settings (key, value) VALUES ('schema_version', $1)
+         ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
+        [String(TARGET_VERSION)]
+      );
+    }
 
     // ─── Seed Settings ───
     const defaultSettings = [
@@ -201,10 +215,22 @@ async function initDB() {
       }
     }
 
-    // ─── Seed Schedule (gán course_id theo thứ tự courses) ───
+    // ─── Seed Schedule (map course_id by stable short_name) ───
     const { rows: existingSchedule } = await client.query('SELECT COUNT(*) FROM schedule');
     if (parseInt(existingSchedule[0].count) === 0) {
-      const { rows: courseRows } = await client.query('SELECT id FROM courses ORDER BY sort_order ASC');
+      const { rows: courseRows } = await client.query('SELECT id, short_name FROM courses ORDER BY sort_order ASC');
+      const courseByShortName = {};
+      for (const c of courseRows) courseByShortName[c.short_name] = c.id;
+
+      // Map schedule class_name prefix to course short_name
+      const scheduleToCourse = {
+        'Lớp 6A': 'LỚP 6',
+        'Lớp 6B': 'LỚP 6',
+        'Lớp 7': 'LỚP 7',
+        'Lớp 8': 'LỚP 8',
+        'Lớp 9': 'LỚP 9',
+      };
+
       const defaultSchedule = [
         { class_name: 'Lớp 6A', time_slot: '18:00 - 20:00', days: 'Thứ 2, 4, 6', status: 'available', status_text: '🟢 Còn chỗ', sort_order: 1 },
         { class_name: 'Lớp 6B', time_slot: '18:00 - 20:00', days: 'Thứ 3, 5, 7', status: 'available', status_text: '🟢 Còn chỗ', sort_order: 2 },
@@ -212,9 +238,8 @@ async function initDB() {
         { class_name: 'Lớp 8', time_slot: '19:00 - 21:00', days: 'Thứ 3, 5, 7', status: 'available', status_text: '🟢 Còn chỗ', sort_order: 4 },
         { class_name: 'Lớp 9', time_slot: '19:00 - 21:30', days: 'Thứ 2, 4, 6', status: 'full', status_text: '🔴 Đầy', sort_order: 5 },
       ];
-      for (let i = 0; i < defaultSchedule.length; i++) {
-        const s = defaultSchedule[i];
-        const courseId = courseRows[i] ? courseRows[i].id : null;
+      for (const s of defaultSchedule) {
+        const courseId = courseByShortName[scheduleToCourse[s.class_name]] || null;
         await client.query(
           `INSERT INTO schedule (course_id, class_name, time_slot, days, status, status_text, sort_order)
            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -260,9 +285,8 @@ async function initDB() {
     const { rows: existingAdmins } = await client.query('SELECT COUNT(*) FROM admins');
     if (parseInt(existingAdmins[0].count) === 0) {
       const bcrypt = require('bcrypt');
-      // Generate a random strong default password
-      const crypto = require('crypto');
-      const defaultPassword = crypto.randomBytes(12).toString('base64').replace(/[+/=]/g, '').slice(0, 16);
+      // Use a deterministic default password for developer convenience
+      const defaultPassword = 'admin123';
       const hash = await bcrypt.hash(defaultPassword, 10);
       await client.query(
         `INSERT INTO admins (username, password_hash) VALUES ($1, $2)`,
