@@ -129,17 +129,62 @@
 - **Ghi nhận:** Đã xóa file
 - **Trạng thái:** ✅ HOÀN THÀNH
 
-### Chưa sửa ❌ (Theo thứ tự ưu tiên)
+#### 19. Base64 image storage (DONE)
+- **Files:** `server.js`, `public/admin/admin.js`, `public/admin/dashboard.html`
+- **Ghi nhận:**
+  - Added multer + `POST /api/admin/upload` endpoint (server.js)
+  - Created `public/uploads/` directory
+  - File upload via FormData (`uploadFile()` helper) replaces base64 FileReader
+  - Drag & drop upload zones on logo & teacher photo
+  - Preview after upload
+- **Trạng thái:** ✅ HOÀN THÀNH
 
-#### 19. Base64 image storage (TODO) - MEDIUM
-- **File:** `public/admin/admin.js` (logo & teacher photo upload handlers)
-- **Vấn đề:** Lưu base64 vào DB, làm phình to dữ liệu
-- **Cần làm (dài hạn):** Thêm endpoint upload file (multer), lưu file vào `public/uploads/`, chỉ lưu URL trong DB
-- **Ghi chú:** Cần cài thêm dependency `multer`, tạo thư mục uploads, cấu hình static serving
+## Redesign Summary
+
+### Phase 3: Admin Dashboard — HOÀN THÀNH ✅
+
+#### Login Page (`public/admin/login.html`)
+- Dark glass-morphism with gradient mesh background
+- Animated gradient border (CSS `@property --angle` rotation)
+- Input focus glow effect (box-shadow + border-color transition)
+- Error shake animation (keyframes)
+- Success → checkmark overlay → auto-redirect dashboard (1.2s)
+- Spinner loading state on button
+
+#### Dashboard Page (`public/admin/dashboard.html`)
+- **Sidebar layout** (260px) replaces horizontal tabs
+  - Logo + 8 nav items with icons
+  - Active state: gradient indicator bar on left
+  - Logout button at bottom
+  - Mobile: hamburger toggle, overlay mode
+- Dark theme: navy/indigo gradient base, glass panels
+- Cards: blurred glass with `rgba(255,255,255,0.04)` bg
+- Inputs: glow focus, translucent bg
+- Buttons: gradient hover + lift shadow
+- Modals: scale entrance animation, dark glass
+- Upload zones: dashed border, drag & drop, click to browse
+- Toggle switches: gradient when active
+- Tables: hover row highlight, status badges
+- Empty states with icons
+- Password tab: show/hide toggles, strength meter (4 bars), requirements checklist, success overlay → 3s countdown → redirect login
+- Color dots selector for course form (replaces dropdown)
+- Smooth tab transitions (fadeSlideIn animation)
+- Custom scrollbar styling
+
+#### Admin JS (`public/admin/admin.js`)
+- Sidebar navigation (replacing `.tab-btn` horizontal)
+- `uploadFile()` — FormData-based upload to `/api/admin/upload`
+- `setupUploadZone()` — drag & drop + click handler
+- Password strength checker (`checkPwdStrength`) — 4 requirements
+- Show/hide password toggle
+- Confirm password match indicator
+- Success overlay → 3s countdown bar → `window.location.href = 'login.html'`
+- Button loading state (`setBtnLoading`) — spinner replaces text
+- Color dot selection for course color
 
 ## Tiến trình tổng thể
 - Tổng số bugs/tối ưu: **19**
-- Đã sửa: **18** (94.7%)
-- Chưa sửa: **1** (5.3%)
-- Ngày bắt đầu: 2026‑06‑09
-- Trạng thái: Gần hoàn thành
+- Đã sửa: **19** (100%)
+- Chưa sửa: **0** (0%)
+- Ngày bắt đầu redesign: 2026‑06‑15
+- Trạng thái: ✅ HOÀN THÀNH

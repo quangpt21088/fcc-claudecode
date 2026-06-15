@@ -3,35 +3,255 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Đăng nhập Admin — Lớp Văn Hoàn</title>
+  <title>Đăng nhập Admin — Ngữ Văn THCS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { display: ['Playfair Display', 'serif'], body: ['Source Sans 3', 'sans-serif'] },
+          colors: {
+            brand: { 50:'#f0f4ff',100:'#dbe4ff',200:'#bac8ff',300:'#91a7ff',400:'#748ffc',500:'#5c7cfa',600:'#4c6ef5',700:'#4263eb',800:'#3b5bdb',900:'#364fc7',950:'#1e2a5e' },
+            accent: { 400:'#ffa94d',500:'#ff922b',600:'#fd7e14' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family:'Source Sans 3',sans-serif;
+      background: radial-gradient(ellipse 70% 60% at 30% 40%, rgba(92,124,250,0.15) 0%, transparent 60%),
+                  radial-gradient(ellipse 50% 50% at 80% 70%, rgba(124,58,237,0.1) 0%, transparent 60%),
+                  linear-gradient(135deg, #0f1638 0%, #172044 50%, #0d1230 100%);
+      min-height:100vh;
+    }
+
+    /* ── Animated gradient border ── */
+    .card-glow {
+      position: relative;
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(24px);
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+    .card-glow::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 25px;
+      padding: 1px;
+      background: linear-gradient(var(--angle, 0deg), rgba(92,124,250,0.5), rgba(168,85,247,0.3), rgba(255,146,43,0.4), rgba(92,124,250,0.5));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      animation: rotate-border 4s linear infinite;
+    }
+    @keyframes rotate-border {
+      0% { --angle: 0deg; }
+      100% { --angle: 360deg; }
+    }
+    @property --angle {
+      syntax: '<angle>';
+      initial-value: 0deg;
+      inherits: false;
+    }
+
+    /* ── Input styles ── */
+    .login-input {
+      width: 100%;
+      padding: 14px 16px 14px 48px;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.05);
+      color: white;
+      font-size: 0.9rem;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+    .login-input::placeholder { color: rgba(255,255,255,0.3); }
+    .login-input:focus {
+      border-color: rgba(92,124,250,0.5);
+      box-shadow: 0 0 0 3px rgba(92,124,250,0.15), 0 0 20px rgba(92,124,250,0.08);
+      background: rgba(255,255,255,0.08);
+    }
+    .input-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255,255,255,0.3);
+      transition: color 0.3s;
+    }
+    .login-input:focus ~ .input-icon,
+    .input-wrapper:hover .input-icon { color: rgba(92,124,250,0.7); }
+
+    /* ── Button ── */
+    .login-btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #4c6ef5 0%, #7c3aed 50%, #4c6ef5 100%);
+      background-size: 200% 100%;
+      color: white;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.4s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .login-btn:hover { background-position: 100% 0; transform: translateY(-2px); box-shadow: 0 8px 30px rgba(76,110,245,0.3); }
+    .login-btn:active { transform: translateY(0); }
+    .login-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+    .login-btn .spinner {
+      display: none;
+      width: 20px; height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin: 0 auto;
+    }
+    .login-btn.loading .btn-text { display: none; }
+    .login-btn.loading .spinner { display: block; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* ── Error message ── */
+    .error-msg {
+      color: #f87171;
+      font-size: 0.85rem;
+      padding: 10px 14px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 10px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    .error-msg.show { display: flex; }
+
+    /* ── Success state ── */
+    .success-overlay {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(15,22,56,0.8);
+      backdrop-filter: blur(8px);
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s;
+    }
+    .success-overlay.show { opacity: 1; pointer-events: auto; }
+    .success-icon {
+      width: 64px; height: 64px;
+      background: rgba(34,197,94,0.15);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      animation: success-pop 0.5s cubic-bezier(.22,1,.36,1) forwards;
+    }
+    @keyframes success-pop {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .success-overlay h3 {
+      color: white;
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .success-overlay p { color: rgba(255,255,255,0.6); font-size: 0.9rem; }
+
+    /* ── Decorative background elements ── */
+    .bg-deco {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+    }
+    .bg-deco-1 { width: 300px; height: 300px; background: rgba(92,124,250,0.08); top: -100px; left: -100px; }
+    .bg-deco-2 { width: 250px; height: 250px; background: rgba(168,85,247,0.06); bottom: -80px; right: -80px; }
+    .bg-deco-3 { width: 200px; height: 200px; background: rgba(255,146,43,0.04); top: 50%; left: 50%; transform: translate(-50%,-50%); }
+
+    /* ── Shake animation ── */
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      10%,30%,50%,70%,90% { transform: translateX(-4px); }
+      20%,40%,60%,80% { transform: translateX(4px); }
+    }
+    .shake { animation: shake 0.5s ease-in-out; }
+  </style>
 </head>
-<body class="min-h-screen bg-gray-100 flex items-center justify-center">
-  <div class="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm">
-    <h1 class="text-2xl font-bold text-center mb-6">🔐 Đăng nhập Admin</h1>
+<body class="flex items-center justify-center p-4">
+  <div class="bg-deco bg-deco-1"></div>
+  <div class="bg-deco bg-deco-2"></div>
+  <div class="bg-deco bg-deco-3"></div>
+
+  <div class="card-glow w-full max-w-sm p-8 relative z-10" id="login-card">
+    <!-- Logo / Brand -->
+    <div class="text-center mb-8">
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-600 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand-600/30">
+        <span class="text-white font-black text-2xl font-display">N</span>
+      </div>
+      <h1 class="text-2xl font-black text-white font-display">Ngữ Văn THCS</h1>
+      <p class="text-gray-400 text-sm mt-1">Đăng nhập quản trị</p>
+    </div>
+
     <form id="login-form" class="space-y-4">
-      <div>
-        <label class="block text-sm font-medium mb-1">Tên đăng nhập</label>
-        <input name="username" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+      <div class="input-wrapper relative">
+        <input name="username" required class="login-input" placeholder="Tên đăng nhập" autocomplete="username" />
+        <svg class="input-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
       </div>
-      <div>
-        <label class="block text-sm font-medium mb-1">Mật khẩu</label>
-        <input name="password" type="password" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+      <div class="input-wrapper relative">
+        <input name="password" type="password" required class="login-input" placeholder="Mật khẩu" autocomplete="current-password" />
+        <svg class="input-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
       </div>
-      <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
-        Đăng nhập
+
+      <div id="login-msg" class="error-msg">
+        <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+        <span id="login-msg-text"></span>
+      </div>
+
+      <button type="submit" class="login-btn mt-2" id="login-btn">
+        <div class="btn-text">Đăng nhập</div>
+        <div class="spinner"></div>
       </button>
-      <div id="login-msg" class="text-center text-sm font-medium hidden"></div>
     </form>
+  </div>
+
+  <!-- Success overlay -->
+  <div class="success-overlay" id="success-overlay">
+    <div class="text-center">
+      <div class="success-icon">
+        <svg class="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+      </div>
+      <h3>Đăng nhập thành công!</h3>
+      <p>Đang chuyển hướng đến Dashboard...</p>
+    </div>
   </div>
 
   <script>
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.target;
-      const msg = document.getElementById('login-msg');
-      const btn = form.querySelector('button');
-      btn.textContent = 'Đang đăng nhập...';
+      const btn = document.getElementById('login-btn');
+      const msgEl = document.getElementById('login-msg');
+      const msgText = document.getElementById('login-msg-text');
+      const card = document.getElementById('login-card');
+
+      msgEl.classList.remove('show');
+      card.classList.remove('shake');
+      btn.classList.add('loading');
       btn.disabled = true;
 
       try {
@@ -46,18 +266,22 @@
         const data = await res.json();
         if (res.ok && data.token) {
           localStorage.setItem('admin_token', data.token);
-          window.location.href = 'dashboard.html';
+          // Show success overlay then redirect
+          document.getElementById('success-overlay').classList.add('show');
+          setTimeout(() => { window.location.href = 'dashboard.html'; }, 1200);
         } else {
-          msg.classList.remove('hidden', 'text-green-600');
-          msg.classList.add('text-red-600');
-          msg.textContent = '❌ ' + (data.error || 'Đăng nhập thất bại');
+          msgText.textContent = data.error || 'Đăng nhập thất bại';
+          msgEl.classList.add('show');
+          card.classList.add('shake');
+          setTimeout(() => card.classList.remove('shake'), 500);
         }
       } catch {
-        msg.classList.remove('hidden');
-        msg.classList.add('text-red-600');
-        msg.textContent = '❌ Không thể kết nối server';
+        msgText.textContent = 'Không thể kết nối server';
+        msgEl.classList.add('show');
+        card.classList.add('shake');
+        setTimeout(() => card.classList.remove('shake'), 500);
       } finally {
-        btn.textContent = 'Đăng nhập';
+        btn.classList.remove('loading');
         btn.disabled = false;
       }
     });

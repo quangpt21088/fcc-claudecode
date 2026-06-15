@@ -10,6 +10,7 @@ Vietnamese tutoring class website built with **Node.js + Express + PostgreSQL**.
 | Database | PostgreSQL |
 | Frontend | HTML, CSS (Tailwind CDN), Vanilla JS |
 | Auth | JWT + bcrypt |
+| File Upload | Multer (disk storage, 2MB limit) |
 | Security | express-rate-limit, XSS sanitization |
 
 ## Features
@@ -21,6 +22,8 @@ Vietnamese tutoring class website built with **Node.js + Express + PostgreSQL**.
 - **Registration System** — Parent/student signup with phone validation
 - **Content Editing** — Live-editable site content via admin panel
 - **Title Styles** — Customizable heading styles (color, size, weight)
+- **File Upload** — Drag & drop image upload (logo, teacher photo) via Multer
+- **Password Change** — With strength meter, requirements checklist, auto-redirect
 
 ## Quick Start
 
@@ -98,6 +101,7 @@ npm start
 | PUT | `/api/admin/title-styles` | Save title styles |
 | GET | `/api/admin/registrations` | List registrations |
 | PUT | `/api/admin/registrations/:id` | Update registration status |
+| POST | `/api/admin/upload` | Upload image file (multipart, 2MB max) |
 | POST | `/api/admin/change-password` | Change admin password |
 
 ## Project Structure
@@ -112,10 +116,10 @@ fcc-claudecode/
 ├── public/
 │   ├── index.html         # Landing page (inline JS)
 │   ├── admin/
-│   │   ├── login.html     # Admin login page
-│   │   ├── dashboard.html # Admin dashboard
-│   │   └── admin.js       # Admin dashboard logic
-│   └── app.js             # (legacy, not used)
+│   │   ├── login.html     # Admin login page (dark glass)
+│   │   ├── dashboard.html # Admin dashboard (sidebar + dark)
+│   │   └── admin.js       # Admin logic (upload, pwd strength)
+│   └── uploads/           # Uploaded images (Multer)
 └── review-note.md         # Bug review notes
 ```
 

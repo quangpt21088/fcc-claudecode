@@ -3,6 +3,7 @@ const path = require('path');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
+const multer = require('multer');
 const { pool, initDB } = require('./database');
 require('dotenv').config();
 
@@ -55,6 +56,24 @@ const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
 app.use('/api/', apiLimiter);
 app.use('/api/admin/login', loginLimiter);
+
+// ─── Multer config for file uploads ───
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, path.join(__dirname, 'public', 'uploads')),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const safe = Date.now() + '-' + Math.round(Math.random() * 1e9) + ext;
+    cb(null, safe);
+  },
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (req, file, cb) => {
+    const ok = ['image/jpeg','image/png','image/gif','image/webp'].includes(file.mimetype);
+    cb(ok ? null : new Error('Chỉ chấp nhận ảnh JPG, PNG, GIF, WebP'), ok);
+  },
+});
 
 // Cache in-memory
 let contentCache = null;
@@ -657,6 +676,20 @@ app.put('/api/admin/registrations/:id', auth, async (req, res) => {
     console.error('PUT /api/admin/registrations/:id error:', err.message);
     res.status(500).json({ error: 'Lỗi server' });
   }
+});
+
+// ─── POST /api/admin/upload — Upload ảnh (logo, teacher photo) ──
+app.post('/api/admin/upload', auth, (req, res) => {
+  upload.single('file')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'Ảnh quá lớn (tối đa 2MB)' });
+      return res.status(400).json({ error: 'Lỗi upload' });
+    }
+    if (err) return res.status(400).json({ error: err.message || 'Lỗi upload' });
+    if (!req.file) return res.status(400).json({ error: 'Không có file' });
+    invalidateCache();
+    res.json({ ok: true, url: '/uploads/' + req.file.filename });
+  });
 });
 
 // ─── POST /api/admin/change-password — Đổi mật khẩu ──────────

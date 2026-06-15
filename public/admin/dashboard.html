@@ -3,483 +3,1031 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard — Lớp Văn Hoàn</title>
+  <title>Admin Dashboard — Ngữ Văn THCS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { display: ['Playfair Display', 'serif'], body: ['Source Sans 3', 'sans-serif'] },
+          colors: {
+            brand: { 50:'#f0f4ff',100:'#dbe4ff',200:'#bac8ff',300:'#91a7ff',400:'#748ffc',500:'#5c7cfa',600:'#4c6ef5',700:'#4263eb',800:'#3b5bdb',900:'#364fc7',950:'#1e2a5e' },
+            accent: { 400:'#ffa94d',500:'#ff922b',600:'#fd7e14' },
+            dark: { 100:'#1e293b',200:'#1a2340',300:'#151d35',400:'#111827',500:'#0d1230',600:'#0a0f24',700:'#070b1a',800:'#050812',900:'#02040a' }
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    .tab-btn.active { background: #2563eb; color: white; }
-    .toggle { position: relative; width: 44px; height: 24px; display: inline-block; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family:'Source Sans 3',sans-serif;
+      background: radial-gradient(ellipse 70% 60% at 20% 40%, rgba(92,124,250,0.08) 0%, transparent 60%),
+                  radial-gradient(ellipse 50% 50% at 80% 70%, rgba(124,58,237,0.05) 0%, transparent 60%),
+                  linear-gradient(135deg, #0a0f24 0%, #111827 50%, #0d1230 100%);
+      min-height:100vh;
+      color: #e2e8f0;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(92,124,250,0.2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(92,124,250,0.4); }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 260px;
+      min-height: 100vh;
+      background: rgba(15,21,53,0.8);
+      backdrop-filter: blur(24px);
+      border-right: 1px solid rgba(255,255,255,0.05);
+      position: fixed;
+      top: 0; left: 0;
+      z-index: 40;
+      transition: transform 0.3s cubic-bezier(.22,1,.36,1);
+    }
+    .sidebar.closed { transform: translateX(-100%); }
+
+    .sidebar-logo {
+      padding: 24px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .sidebar-logo-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, #4c6ef5, #7c3aed);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; color: white; font-family: 'Playfair Display', serif;
+      box-shadow: 0 4px 15px rgba(76,110,245,0.3);
+    }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 20px;
+      color: rgba(255,255,255,0.5);
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+    .nav-item:hover { color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.03); }
+    .nav-item.active {
+      color: white;
+      background: rgba(92,124,250,0.1);
+    }
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 8px; bottom: 8px;
+      width: 3px;
+      background: linear-gradient(180deg, #4c6ef5, #7c3aed);
+      border-radius: 0 3px 3px 0;
+    }
+    .nav-icon { font-size: 1.1rem; width: 20px; text-align: center; }
+
+    .sidebar-footer {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 16px 20px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .logout-btn {
+      display: flex; align-items: center; gap: 10px;
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.15);
+      border-radius: 10px;
+      color: #f87171;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .logout-btn:hover { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); }
+
+    /* ── Main content ── */
+    .main-content {
+      margin-left: 260px;
+      padding: 32px;
+      min-height: 100vh;
+      transition: margin-left 0.3s;
+    }
+    .sidebar.closed ~ .main-content { margin-left: 0; }
+
+    /* ── Tab panels ── */
+    .tab-panel { display: none; animation: fadeSlideIn 0.35s cubic-bezier(.22,1,.36,1); }
+    .tab-panel.active { display: block; }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Cards ── */
+    .dash-card {
+      background: rgba(255,255,255,0.03);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .dash-card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 4px;
+    }
+    .dash-card-subtitle {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 20px;
+    }
+
+    /* ── Inputs ── */
+    .dash-label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .dash-input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.04);
+      color: white;
+      font-size: 0.875rem;
+      outline: none;
+      transition: all 0.25s;
+    }
+    .dash-input::placeholder { color: rgba(255,255,255,0.2); }
+    .dash-input:focus {
+      border-color: rgba(92,124,250,0.4);
+      box-shadow: 0 0 0 3px rgba(92,124,250,0.1), 0 0 15px rgba(92,124,250,0.05);
+      background: rgba(255,255,255,0.06);
+    }
+    textarea.dash-input { resize: vertical; min-height: 80px; }
+    select.dash-input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23ffffff60' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+
+    /* ── Buttons ── */
+    .dash-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+    .dash-btn-primary {
+      background: linear-gradient(135deg, #4c6ef5, #7c3aed);
+      color: white;
+    }
+    .dash-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(76,110,245,0.25); }
+    .dash-btn-success {
+      background: linear-gradient(135deg, #16a34a, #22c55e);
+      color: white;
+    }
+    .dash-btn-success:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(34,197,94,0.25); }
+    .dash-btn-ghost {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.7);
+    }
+    .dash-btn-ghost:hover { background: rgba(255,255,255,0.08); color: white; }
+    .dash-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+
+    .dash-btn .spinner {
+      display: none;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    .dash-btn.loading .btn-text { display: none; }
+    .dash-btn.loading .spinner { display: block; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* ── Toast message ── */
+    .toast {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .toast.show { opacity: 1; }
+    .toast-success { color: #4ade80; }
+    .toast-error { color: #f87171; }
+
+    /* ── Toggle switch ── */
+    .toggle { position: relative; width: 44px; height: 24px; display: inline-block; flex-shrink: 0; }
     .toggle input { opacity: 0; width: 0; height: 0; }
-    .toggle .slider { position: absolute; inset: 0; background: #ccc; border-radius: 24px; cursor: pointer; transition: 0.3s; }
-    .toggle .slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
-    .toggle input:checked + .slider { background: #22c55e; }
-    .toggle input:checked + .slider::before { transform: translateX(20px); }
-    .admin-input { width:100%; padding:0.5rem 0.75rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem; outline:none; }
-    .admin-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
-    .admin-label { display:block; font-size:0.75rem; font-weight:600; color:#6b7280; margin-bottom:0.25rem; }
-    .admin-btn { padding:0.5rem 1rem; font-size:0.875rem; font-weight:600; border-radius:0.5rem; border:none; cursor:pointer; transition:all 0.2s; }
-    .admin-btn-primary { background:#2563eb; color:white; }
-    .admin-btn-primary:hover { background:#1d4ed8; }
-    .admin-btn-success { background:#16a34a; color:white; }
-    .admin-btn-success:hover { background:#15803d; }
-    .admin-section { background:#f9fafb; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem; margin-bottom:0.75rem; }
-    .title-style-preview { padding:0.5rem; border:1px dashed #d1d5db; border-radius:0.5rem; margin-top:0.5rem; }
+    .toggle .slider { position: absolute; inset: 0; background: rgba(255,255,255,0.1); border-radius: 24px; cursor: pointer; transition: 0.3s; }
+    .toggle .slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: rgba(255,255,255,0.5); border-radius: 50%; transition: 0.3s; }
+    .toggle input:checked + .slider { background: linear-gradient(135deg, #16a34a, #22c55e); }
+    .toggle input:checked + .slider::before { transform: translateX(20px); background: white; }
+
+    /* ── Modal ── */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(5,8,18,0.7);
+      backdrop-filter: blur(8px);
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal-card {
+      background: rgba(21,29,53,0.95);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 28px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: modalIn 0.3s cubic-bezier(.22,1,.36,1);
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.95) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    /* ── File upload zone ── */
+    .upload-zone {
+      border: 2px dashed rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s;
+      background: rgba(255,255,255,0.02);
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: rgba(92,124,250,0.4);
+      background: rgba(92,124,250,0.05);
+    }
+    .upload-zone-icon { font-size: 2rem; margin-bottom: 8px; }
+    .upload-zone-text { color: rgba(255,255,255,0.5); font-size: 0.85rem; }
+
+    /* ── Color picker row ── */
+    .color-dot {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      border: 2px solid rgba(255,255,255,0.1);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .color-dot:hover, .color-dot.selected { border-color: white; transform: scale(1.1); }
+
+    /* ── Table ── */
+    .dash-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.85rem;
+    }
+    .dash-table th {
+      text-align: left;
+      padding: 10px 14px;
+      color: rgba(255,255,255,0.4);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .dash-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      color: rgba(255,255,255,0.7);
+    }
+    .dash-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* ── Course card in list ── */
+    .course-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 16px;
+      transition: all 0.2s;
+    }
+    .course-card:hover { border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); }
+    .course-color-bar { width: 4px; border-radius: 2px; flex-shrink: 0; }
+
+    /* ── Schedule card ── */
+    .schedule-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 14px 16px;
+      transition: all 0.2s;
+    }
+    .schedule-card:hover { border-color: rgba(255,255,255,0.1); }
+
+    /* ── Badge ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-available { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .badge-almost { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .badge-full { background: rgba(239,68,68,0.15); color: #f87171; }
+    .badge-hidden { background: rgba(148,163,184,0.15); color: #94a3b8; }
+
+    /* ── Password strength ── */
+    .pwd-strength { display: flex; gap: 4px; margin-top: 6px; }
+    .pwd-strength-bar { height: 4px; flex: 1; border-radius: 2px; background: rgba(255,255,255,0.1); transition: background 0.3s; }
+    .pwd-strength-bar.weak { background: #ef4444; }
+    .pwd-strength-bar.medium { background: #f59e0b; }
+    .pwd-strength-bar.strong { background: #22c55e; }
+
+    .pwd-req {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.4);
+      margin-top: 4px;
+    }
+    .req-icon { width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; flex-shrink: 0; }
+    .req-icon.fail { background: rgba(239,68,68,0.2); color: #f87171; }
+    .req-icon.pass { background: rgba(34,197,94,0.2); color: #4ade80; }
+
+    /* ── Success overlay ── */
+    .success-overlay {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(5,8,18,0.8);
+      backdrop-filter: blur(8px);
+      z-index: 60;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s;
+    }
+    .success-overlay.show { opacity: 1; pointer-events: auto; }
+    .success-icon {
+      width: 64px; height: 64px;
+      background: rgba(34,197,94,0.15);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      animation: success-pop 0.5s cubic-bezier(.22,1,.36,1) forwards;
+    }
+    @keyframes success-pop {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ── Mobile menu toggle ── */
+    .mobile-toggle {
+      display: none;
+      position: fixed;
+      top: 16px; left: 16px;
+      z-index: 45;
+      width: 40px; height: 40px;
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      align-items: center; justify-content: center;
+      cursor: pointer;
+      color: white;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main-content { margin-left: 0; padding: 20px; padding-top: 64px; }
+      .mobile-toggle { display: flex; }
+    }
+
+    /* ── Section divider ── */
+    .section-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+      margin: 20px 0;
+    }
+
+    /* ── Stat card ── */
+    .stat-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: white;
+    }
+    .stat-label { font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 2px; }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: rgba(255,255,255,0.3);
+    }
+    .empty-state-icon { font-size: 2.5rem; margin-bottom: 12px; }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body>
 
-  <!-- HEADER -->
-  <header class="bg-white shadow-sm">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-      <h1 class="text-xl font-bold text-blue-700">📚 Admin — Lớp Văn Hoàn</h1>
-      <button id="logout-btn" class="text-sm text-gray-500 hover:text-red-600">Đăng xuất</button>
-    </div>
-  </header>
+  <!-- Mobile menu toggle -->
+  <button class="mobile-toggle" id="mobile-menu-btn">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+  </button>
 
-  <!-- TABS -->
-  <div class="max-w-6xl mx-auto px-4 mt-6">
-    <div class="flex gap-2 flex-wrap">
-      <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="content">📝 Nội dung</button>
-      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="general">⚙️ Cấu hình</button>
-      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="titles">🎨 Tiêu đề</button>
-      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="teacher">👨‍🏫 Giáo viên</button>
-      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="courses">📚 Khóa học</button>
-      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="schedule">📅 Lịch học</button>
-      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="registrations">📋 Đăng ký</button>
-      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white shadow-sm" data-tab="password">🔐 Đổi mật khẩu</button>
-    </div>
-  </div>
-
-  <!-- TAB 1: NỘI DUNG -->
-  <div id="tab-content" class="max-w-6xl mx-auto px-4 mt-6">
-    <div class="bg-white rounded-xl shadow p-6">
-      <h2 class="text-lg font-bold mb-4">Quản lý Nội dung Trang chủ</h2>
-      <div class="grid md:grid-cols-2 gap-4">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="flex items-center gap-3">
+        <div class="sidebar-logo-icon">N</div>
         <div>
-          <label class="admin-label">Tiêu đề chính (H1) - Dòng 1</label>
-          <input id="f-hero-title1" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Tiêu đề chính (H1) - Dòng 2</label>
-          <input id="f-hero-title2" class="admin-input">
-        </div>
-        <div class="md:col-span-2">
-          <label class="admin-label">Mô tả Hero</label>
-          <textarea id="f-hero-desc" rows="2" class="admin-input"></textarea>
-        </div>
-        <div>
-          <label class="admin-label">Badge</label>
-          <input id="f-hero-badge" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Số liệu 1 (Giá trị)</label>
-          <input id="f-stat1-value" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Số liệu 1 (Nhãn)</label>
-          <input id="f-stat1-label" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Số liệu 2 (Giá trị)</label>
-          <input id="f-stat2-value" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Số liệu 2 (Nhãn)</label>
-          <input id="f-stat2-label" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Số liệu 3 (Giá trị)</label>
-          <input id="f-stat3-value" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Số liệu 3 (Nhãn)</label>
-          <input id="f-stat3-label" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Tiêu đề Khóa học</label>
-          <input id="f-courses-title" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Mô tả Khóa học</label>
-          <input id="f-courses-desc" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Tiêu đề Lịch học</label>
-          <input id="f-schedule-title" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Mô tả Lịch học</label>
-          <input id="f-schedule-desc" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Tiêu đề Form</label>
-          <input id="f-form-title" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Mô tả Form</label>
-          <input id="f-form-desc" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Hotline</label>
-          <input id="f-hotline" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Địa chỉ</label>
-          <input id="f-address" class="admin-input">
-        </div>
-        <div class="md:col-span-2">
-          <label class="admin-label">Google Maps URL</label>
-          <input id="f-map" class="admin-input">
+          <div class="text-white font-bold text-sm">Ngữ Văn THCS</div>
+          <div class="text-gray-500 text-xs">Admin Panel</div>
         </div>
       </div>
-      <div class="mt-4 flex items-center gap-4">
-        <button id="btn-save-content" class="admin-btn admin-btn-primary">💾 Lưu nội dung</button>
-        <span id="msg-content" class="text-sm font-medium"></span>
-      </div>
     </div>
-  </div>
 
-  <!-- TAB 1.5: CẤU HÌNH CHUNG -->
-  <div id="tab-general" class="max-w-6xl mx-auto px-4 mt-6 hidden">
-    <div class="bg-white rounded-xl shadow p-6">
-      <h2 class="text-lg font-bold mb-4">⚙️ Cấu hình Chung</h2>
+    <nav class="py-4">
+      <button class="nav-item active" data-tab="content">
+        <span class="nav-icon">📝</span> Nội dung
+      </button>
+      <button class="nav-item" data-tab="general">
+        <span class="nav-icon">⚙️</span> Cấu hình
+      </button>
+      <button class="nav-item" data-tab="titles">
+        <span class="nav-icon">🎨</span> Tiêu đề
+      </button>
+      <button class="nav-item" data-tab="teacher">
+        <span class="nav-icon">👨‍🏫</span> Giáo viên
+      </button>
+      <button class="nav-item" data-tab="courses">
+        <span class="nav-icon">📚</span> Khóa học
+      </button>
+      <button class="nav-item" data-tab="schedule">
+        <span class="nav-icon">📅</span> Lịch học
+      </button>
+      <button class="nav-item" data-tab="registrations">
+        <span class="nav-icon">📋</span> Đăng ký
+      </button>
+      <button class="nav-item" data-tab="password">
+        <span class="nav-icon">🔐</span> Đổi mật khẩu
+      </button>
+    </nav>
 
-      <!-- Logo -->
-      <div class="admin-section">
-        <h3 class="font-bold text-sm mb-2">🖼️ Logo</h3>
-        <p class="text-xs text-gray-500 mb-2">Tải ảnh logo lên hoặc dán URL. Khuyến nghị: 100x100px, PNG nền trong suốt.</p>
-        <div class="flex gap-4 items-start">
-          <div class="flex-1">
-            <label class="admin-label">URL Logo</label>
-            <input id="f-logo-url" class="admin-input" placeholder="https://... hoặc data:image/...">
+    <div class="sidebar-footer">
+      <button class="logout-btn" id="logout-btn">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Đăng xuất
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content" id="main-content">
+
+    <!-- TAB 1: NỘI DUNG -->
+    <div id="tab-content" class="tab-panel active">
+      <div class="dash-card">
+        <h2 class="dash-card-title">📝 Nội dung Trang chủ</h2>
+        <p class="dash-card-subtitle">Quản lý toàn bộ text hiển thị trên landing page</p>
+
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="dash-label">Tiêu đề chính (H1) — Dòng 1</label>
+            <input id="f-hero-title1" class="dash-input" placeholder="Khơi nguồn tư duy">
           </div>
-          <div class="shrink-0">
-            <label class="admin-label">Hoặc upload</label>
-            <input id="f-logo-file" type="file" accept="image/*" class="admin-input">
+          <div>
+            <label class="dash-label">Tiêu đề chính (H1) — Dòng 2</label>
+            <input id="f-hero-title2" class="dash-input" placeholder="Nền tảng vững chắc">
           </div>
-        </div>
-        <div class="mt-2">
-          <img id="logo-preview" src="" alt="Logo Preview" class="w-20 h-20 object-contain rounded-lg border bg-gray-50" style="display:none"/>
-        </div>
-      </div>
-
-      <!-- Site Name -->
-      <div class="grid md:grid-cols-2 gap-4">
-        <div>
-          <label class="admin-label">Tên thương hiệu (Header & Footer)</label>
-          <input id="f-site-name" class="admin-input" placeholder="Ngữ Văn">
-        </div>
-        <div>
-          <label class="admin-label">Phần nhấn mạnh</label>
-          <input id="f-site-name-accent" class="admin-input" placeholder="THCS">
-        </div>
-      </div>
-
-      <!-- Section Titles -->
-      <div class="mt-4 grid md:grid-cols-2 gap-4">
-        <div>
-          <label class="admin-label">Tiêu đề Phương pháp</label>
-          <input id="f-approach-title" class="admin-input" placeholder="Chương Trình Học">
-        </div>
-        <div>
-          <label class="admin-label">Tiêu đề Tại sao</label>
-          <input id="f-why-title" class="admin-input" placeholder="Tại Sao Phụ Huynh Tin Tưởng?">
-        </div>
-      </div>
-
-      <div class="mt-4 flex items-center gap-4">
-        <button id="btn-save-general" class="admin-btn admin-btn-primary">💾 Lưu cấu hình</button>
-        <span id="msg-general" class="text-sm font-medium"></span>
-      </div>
-    </div>
-  </div>
-
-  <!-- TAB 2: TIÊU ĐỀ (Style Editor) -->
-  <div id="tab-titles" class="max-w-6xl mx-auto px-4 mt-6 hidden">
-    <div class="bg-white rounded-xl shadow p-6">
-      <h2 class="text-lg font-bold mb-2">🎨 Tùy chỉnh Tiêu đề</h2>
-      <p class="text-sm text-gray-500 mb-4">Chọn tiêu đề để chỉnh sửa font, kích thước, màu sắc. Tất cả tiêu đề sử dụng màu trắng làm màu chính.</p>
-
-      <div class="mb-4">
-        <label class="admin-label">Chọn tiêu đề</label>
-        <select id="title-selector" class="admin-input">
-          <option value="hero-title1">Hero - Tiêu đề dòng 1</option>
-          <option value="hero-title2">Hero - Tiêu đề dòng 2</option>
-          <option value="courses-section-title">Khóa học - Tiêu đề</option>
-          <option value="schedule-section-title">Lịch học - Tiêu đề</option>
-          <option value="form-section-title">Form - Tiêu đề</option>
-          <option value="approach-title">Phương pháp - Tiêu đề</option>
-          <option value="why-title">Tại sao - Tiêu đề</option>
-        </select>
-      </div>
-
-      <div class="grid md:grid-cols-3 gap-4">
-        <div>
-          <label class="admin-label">Font chữ</label>
-          <select id="title-font" class="admin-input">
-            <option value="Inter">Inter</option>
-            <option value="Arial">Arial</option>
-            <option value="Georgia">Georgia</option>
-            <option value="Verdana">Verdana</option>
-            <option value="Tahoma">Tahoma</option>
-            <option value="system-ui">System UI</option>
-          </select>
-        </div>
-        <div>
-          <label class="admin-label">Kích thước (px)</label>
-          <input id="title-size" type="number" min="12" max="72" value="48" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Độ đậm</label>
-          <select id="title-weight" class="admin-input">
-            <option value="400">Normal</option>
-            <option value="500">Medium</option>
-            <option value="600">Semi Bold</option>
-            <option value="700" selected>Bold</option>
-            <option value="800">Extra Bold</option>
-            <option value="900">Black</option>
-          </select>
-        </div>
-        <div>
-          <label class="admin-label">Màu chữ</label>
-          <div class="flex gap-2 items-center">
-            <input id="title-color" type="color" value="#ffffff" class="w-12 h-10 rounded border cursor-pointer">
-            <input id="title-color-text" value="#ffffff" class="admin-input flex-1">
+          <div class="md:col-span-2">
+            <label class="dash-label">Mô tả Hero</label>
+            <textarea id="f-hero-desc" rows="2" class="dash-input" placeholder="Mô tả ngắn gọn..."></textarea>
+          </div>
+          <div>
+            <label class="dash-label">Badge</label>
+            <input id="f-hero-badge" class="dash-input" placeholder="⭐ 30 năm kinh nghiệm">
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="dash-label">Số liệu 1 — Giá trị</label>
+              <input id="f-stat1-value" class="dash-input" placeholder="10.000+">
+            </div>
+            <div>
+              <label class="dash-label">Số liệu 1 — Nhãn</label>
+              <input id="f-stat1-label" class="dash-input" placeholder="Học sinh">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="dash-label">Số liệu 2 — Giá trị</label>
+              <input id="f-stat2-value" class="dash-input" placeholder="98%">
+            </div>
+            <div>
+              <label class="dash-label">Số liệu 2 — Nhãn</label>
+              <input id="f-stat2-label" class="dash-input" placeholder="Đạt mục tiêu">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="dash-label">Số liệu 3 — Giá trị</label>
+              <input id="f-stat3-value" class="dash-input" placeholder="30 năm">
+            </div>
+            <div>
+              <label class="dash-label">Số liệu 3 — Nhãn</label>
+              <input id="f-stat3-label" class="dash-input" placeholder="Kinh nghiệm">
+            </div>
+          </div>
+          <div>
+            <label class="dash-label">Tiêu đề Khóa học</label>
+            <input id="f-courses-title" class="dash-input" placeholder="Chương Trình Học">
+          </div>
+          <div>
+            <label class="dash-label">Mô tả Khóa học</label>
+            <input id="f-courses-desc" class="dash-input" placeholder="Chương trình học...">
+          </div>
+          <div>
+            <label class="dash-label">Tiêu đề Lịch học</label>
+            <input id="f-schedule-title" class="dash-input" placeholder="Lịch Học">
+          </div>
+          <div>
+            <label class="dash-label">Mô tả Lịch học</label>
+            <input id="f-schedule-desc" class="dash-input" placeholder="Lịch học chi tiết...">
+          </div>
+          <div>
+            <label class="dash-label">Tiêu đề Form</label>
+            <input id="f-form-title" class="dash-input" placeholder="Đăng Ký Ngay">
+          </div>
+          <div>
+            <label class="dash-label">Mô tả Form</label>
+            <input id="f-form-desc" class="dash-input" placeholder="Form đăng ký...">
+          </div>
+          <div>
+            <label class="dash-label">Hotline</label>
+            <input id="f-hotline" class="dash-input" placeholder="0901 234 567">
+          </div>
+          <div>
+            <label class="dash-label">Địa chỉ</label>
+            <input id="f-address" class="dash-input" placeholder="123 Đường ABC, Quận X">
+          </div>
+          <div class="md:col-span-2">
+            <label class="dash-label">Google Maps URL</label>
+            <input id="f-map" class="dash-input" placeholder="https://maps.google.com/...">
           </div>
         </div>
-        <div>
-          <label class="admin-label">Line Height</label>
-          <select id="title-lineheight" class="admin-input">
-            <option value="1.0">1.0 (Compact)</option>
-            <option value="1.2">1.2 (Normal)</option>
-            <option value="1.4" selected>1.4 (Relaxed)</option>
-            <option value="1.6">1.6 (Loose)</option>
-            <option value="1.8">1.8 (Spacious)</option>
+
+        <div class="mt-6 flex items-center gap-4">
+          <button id="btn-save-content" class="dash-btn dash-btn-primary">
+            <span class="btn-text">💾 Lưu nội dung</span>
+            <span class="spinner"></span>
+          </button>
+          <span id="msg-content" class="toast"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 1.5: CẤU HÌNH CHUNG -->
+    <div id="tab-general" class="tab-panel">
+      <div class="dash-card">
+        <h2 class="dash-card-title">⚙️ Cấu hình Chung</h2>
+        <p class="dash-card-subtitle">Logo, tên thương hiệu, tiêu đề các phần</p>
+
+        <!-- Logo -->
+        <div class="mb-6">
+          <h3 class="text-white font-semibold text-sm mb-3">🖼️ Logo</h3>
+          <div class="upload-zone" id="logo-upload-zone">
+            <input type="file" id="logo-file-input" accept="image/*" style="display:none">
+            <div class="upload-zone-icon">📤</div>
+            <div class="upload-zone-text">Kéo thả ảnh vào đây hoặc click để chọn</div>
+            <div class="upload-zone-text" style="font-size:0.75rem;margin-top:4px;">PNG, JPG, WebP — Tối đa 2MB</div>
+          </div>
+          <div class="mt-3">
+            <label class="dash-label">Hoặc nhập URL</label>
+            <input id="f-logo-url" class="dash-input" placeholder="https://... hoặc /uploads/logo.png">
+          </div>
+          <div class="mt-3">
+            <img id="logo-preview" src="" alt="Logo Preview" class="w-20 h-20 object-contain rounded-xl border border-white/10 bg-white/5" style="display:none"/>
+          </div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- Site Name -->
+        <div class="grid md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="dash-label">Tên thương hiệu (Header & Footer)</label>
+            <input id="f-site-name" class="dash-input" placeholder="Ngữ Văn">
+          </div>
+          <div>
+            <label class="dash-label">Phần nhấn mạnh</label>
+            <input id="f-site-name-accent" class="dash-input" placeholder="THCS">
+          </div>
+        </div>
+
+        <!-- Section Titles -->
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="dash-label">Tiêu đề Phương pháp</label>
+            <input id="f-approach-title" class="dash-input" placeholder="Chương Trình Học">
+          </div>
+          <div>
+            <label class="dash-label">Tiêu đề Tại sao</label>
+            <input id="f-why-title" class="dash-input" placeholder="Tại Sao Phụ Huynh Tin Tưởng?">
+          </div>
+        </div>
+
+        <div class="mt-6 flex items-center gap-4">
+          <button id="btn-save-general" class="dash-btn dash-btn-primary">
+            <span class="btn-text">💾 Lưu cấu hình</span>
+            <span class="spinner"></span>
+          </button>
+          <span id="msg-general" class="toast"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: TIÊU ĐỀ (Style Editor) -->
+    <div id="tab-titles" class="tab-panel">
+      <div class="dash-card">
+        <h2 class="dash-card-title">🎨 Tùy chỉnh Tiêu đề</h2>
+        <p class="dash-card-subtitle">Chỉnh sửa font, kích thước, màu sắc cho từng tiêu đề</p>
+
+        <div class="mb-5">
+          <label class="dash-label">Chọn tiêu đề</label>
+          <select id="title-selector" class="dash-input">
+            <option value="hero-title1">Hero — Tiêu đề dòng 1</option>
+            <option value="hero-title2">Hero — Tiêu đề dòng 2</option>
+            <option value="courses-section-title">Khóa học — Tiêu đề</option>
+            <option value="schedule-section-title">Lịch học — Tiêu đề</option>
+            <option value="form-section-title">Form — Tiêu đề</option>
+            <option value="approach-title">Phương pháp — Tiêu đề</option>
+            <option value="why-title">Tại sao — Tiêu đề</option>
           </select>
         </div>
-        <div>
-          <label class="admin-label">Letter Spacing</label>
-          <select id="title-spacing" class="admin-input">
-            <option value="-0.02em">Tight</option>
-            <option value="0em" selected>Normal</option>
-            <option value="0.02em">Wide</option>
-            <option value="0.05em">Wider</option>
-          </select>
+
+        <div class="grid md:grid-cols-3 gap-4">
+          <div>
+            <label class="dash-label">Font chữ</label>
+            <select id="title-font" class="dash-input">
+              <option value="Playfair Display">Playfair Display</option>
+              <option value="Source Sans 3">Source Sans 3</option>
+              <option value="Georgia">Georgia</option>
+              <option value="Arial">Arial</option>
+              <option value="Verdana">Verdana</option>
+              <option value="system-ui">System UI</option>
+            </select>
+          </div>
+          <div>
+            <label class="dash-label">Kích thước (px)</label>
+            <input id="title-size" type="number" min="12" max="72" value="48" class="dash-input">
+          </div>
+          <div>
+            <label class="dash-label">Độ đậm</label>
+            <select id="title-weight" class="dash-input">
+              <option value="400">Normal</option>
+              <option value="500">Medium</option>
+              <option value="600">Semi Bold</option>
+              <option value="700">Bold</option>
+              <option value="800">Extra Bold</option>
+              <option value="900">Black</option>
+            </select>
+          </div>
+          <div>
+            <label class="dash-label">Màu chữ</label>
+            <div class="flex gap-2 items-center">
+              <input id="title-color" type="color" value="#ffffff" class="w-12 h-10 rounded-lg border border-white/10 cursor-pointer bg-transparent">
+              <input id="title-color-text" value="#ffffff" class="dash-input flex-1">
+            </div>
+          </div>
+          <div>
+            <label class="dash-label">Line Height</label>
+            <select id="title-lineheight" class="dash-input">
+              <option value="1.0">1.0 (Compact)</option>
+              <option value="1.2">1.2 (Normal)</option>
+              <option value="1.4">1.4 (Relaxed)</option>
+              <option value="1.6">1.6 (Loose)</option>
+              <option value="1.8">1.8 (Spacious)</option>
+            </select>
+          </div>
+          <div>
+            <label class="dash-label">Letter Spacing</label>
+            <select id="title-spacing" class="dash-input">
+              <option value="-0.02em">Tight</option>
+              <option value="0em">Normal</option>
+              <option value="0.02em">Wide</option>
+              <option value="0.05em">Wider</option>
+            </select>
+          </div>
         </div>
-      </div>
 
-      <div class="mt-4">
-        <label class="admin-label">Xem trước</label>
-        <div class="title-style-preview bg-brand-900">
-          <span id="title-preview" class="text-white">Khơi nguồn tư duy</span>
+        <div class="mt-5">
+          <label class="dash-label">Xem trước</label>
+          <div class="bg-brand-900 rounded-xl p-4 border border-white/5">
+            <span id="title-preview" class="text-white">Khơi nguồn tư duy</span>
+          </div>
         </div>
-      </div>
 
-      <div class="mt-4 flex items-center gap-4">
-        <button id="btn-save-title-style" class="admin-btn admin-btn-primary">💾 Lưu style tiêu đề</button>
-        <button id="btn-reset-title-style" class="admin-btn admin-btn-success">🔄 Reset về mặc định</button>
-        <span id="msg-titles" class="text-sm font-medium"></span>
-      </div>
+        <div class="mt-6 flex items-center gap-4 flex-wrap">
+          <button id="btn-save-title-style" class="dash-btn dash-btn-primary">
+            <span class="btn-text">💾 Lưu style</span>
+            <span class="spinner"></span>
+          </button>
+          <button id="btn-reset-title-style" class="dash-btn dash-btn-ghost">🔄 Reset mặc định</button>
+          <span id="msg-titles" class="toast"></span>
+        </div>
 
-      <div class="mt-6 border-t pt-4">
-        <h3 class="font-bold text-sm mb-2">Style đã lưu</h3>
+        <div class="section-divider"></div>
+        <h3 class="text-white font-semibold text-sm mb-3">Style đã lưu</h3>
         <div id="saved-styles-list" class="space-y-2 text-sm"></div>
       </div>
     </div>
-  </div>
 
-  <!-- TAB 3: GIÁO VIÊN -->
-  <div id="tab-teacher" class="max-w-6xl mx-auto px-4 mt-6 hidden">
-    <div class="bg-white rounded-xl shadow p-6">
-      <h2 class="text-lg font-bold mb-4">👨‍🏫 Quản lý Giáo viên</h2>
+    <!-- TAB 3: GIÁO VIÊN -->
+    <div id="tab-teacher" class="tab-panel">
+      <div class="dash-card">
+        <h2 class="dash-card-title">👨‍🏫 Quản lý Giáo viên</h2>
+        <p class="dash-card-subtitle">Thông tin giáo viên hiển thị trên trang chủ</p>
 
-      <div class="grid md:grid-cols-2 gap-4">
-        <div>
-          <label class="admin-label">Tên giáo viên</label>
-          <input id="f-teacher-name" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Nhãn</label>
-          <input id="f-teacher-label" class="admin-input">
-        </div>
-        <div class="md:col-span-2">
-          <label class="admin-label">Giới thiệu</label>
-          <textarea id="f-teacher-bio" rows="3" class="admin-input"></textarea>
-        </div>
-        <div>
-          <label class="admin-label">% Hài lòng</label>
-          <input id="f-satisfaction-value" class="admin-input">
-        </div>
-        <div>
-          <label class="admin-label">Nhãn hài lòng</label>
-          <input id="f-satisfaction-label" class="admin-input">
-        </div>
-      </div>
-
-      <div class="mt-4 admin-section">
-        <h3 class="font-bold text-sm mb-2">📷 Ảnh giáo viên</h3>
-        <p class="text-xs text-gray-500 mb-2">Tải ảnh lên hoặc dán URL ảnh. Hỗ trợ JPG, PNG, WebP.</p>
-        <div class="flex gap-4 items-start">
-          <div class="flex-1">
-            <label class="admin-label">URL ảnh</label>
-            <input id="f-teacher-photo" class="admin-input" placeholder="https://... hoặc data:image/...">
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="dash-label">Tên giáo viên</label>
+            <input id="f-teacher-name" class="dash-input" placeholder="Thầy Nguyễn Văn A">
           </div>
-          <div class="shrink-0">
-            <label class="admin-label">Hoặc upload</label>
-            <input id="f-teacher-photo-file" type="file" accept="image/*" class="admin-input">
+          <div>
+            <label class="dash-label">Nhãn</label>
+            <input id="f-teacher-label" class="dash-input" placeholder="Giáo viên chính">
+          </div>
+          <div class="md:col-span-2">
+            <label class="dash-label">Giới thiệu</label>
+            <textarea id="f-teacher-bio" rows="3" class="dash-input" placeholder="Giới thiệu ngắn gọn..."></textarea>
+          </div>
+          <div>
+            <label class="dash-label">% Hài lòng</label>
+            <input id="f-satisfaction-value" class="dash-input" placeholder="98%">
+          </div>
+          <div>
+            <label class="dash-label">Nhãn hài lòng</label>
+            <input id="f-satisfaction-label" class="dash-input" placeholder="Hài lòng">
           </div>
         </div>
-        <div class="mt-2">
-          <img id="teacher-photo-preview" src="" alt="Preview" class="w-32 h-32 object-cover rounded-lg border" style="display:none"/>
-        </div>
-      </div>
 
-      <div class="mt-4 flex items-center gap-4">
-        <button id="btn-save-teacher" class="admin-btn admin-btn-primary">💾 Lưu giáo viên</button>
-        <span id="msg-teacher" class="text-sm font-medium"></span>
+        <div class="section-divider"></div>
+
+        <h3 class="text-white font-semibold text-sm mb-3">📷 Ảnh giáo viên</h3>
+        <div class="upload-zone" id="teacher-upload-zone">
+          <input type="file" id="teacher-file-input" accept="image/*" style="display:none">
+          <div class="upload-zone-icon">📤</div>
+          <div class="upload-zone-text">Kéo thả ảnh vào đây hoặc click để chọn</div>
+          <div class="upload-zone-text" style="font-size:0.75rem;margin-top:4px;">JPG, PNG, WebP — Tối đa 2MB</div>
+        </div>
+        <div class="mt-3">
+          <label class="dash-label">Hoặc nhập URL</label>
+          <input id="f-teacher-photo" class="dash-input" placeholder="https://... hoặc /uploads/teacher.png">
+        </div>
+        <div class="mt-3">
+          <img id="teacher-photo-preview" src="" alt="Preview" class="w-24 h-24 object-cover rounded-full border-2 border-white/10" style="display:none"/>
+        </div>
+
+        <div class="mt-6 flex items-center gap-4">
+          <button id="btn-save-teacher" class="dash-btn dash-btn-primary">
+            <span class="btn-text">💾 Lưu giáo viên</span>
+            <span class="spinner"></span>
+          </button>
+          <span id="msg-teacher" class="toast"></span>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- TAB 4: KHÓA HỌC -->
-  <div id="tab-courses" class="max-w-6xl mx-auto px-4 mt-6 hidden">
-    <div class="bg-white rounded-xl shadow p-6">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h2 class="text-lg font-bold">📚 Quản lý Khóa học</h2>
-          <p class="text-sm text-gray-500">Thêm, sửa, xóa và ẩn/hiện. Khi ẩn khóa học, lịch học liên quan cũng ẩn theo.</p>
+    <!-- TAB 4: KHÓA HỌC -->
+    <div id="tab-courses" class="tab-panel">
+      <div class="dash-card">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h2 class="dash-card-title">📚 Quản lý Khóa học</h2>
+            <p class="dash-card-subtitle">Thêm, sửa, xóa và ẩn/hiện khóa học</p>
+          </div>
+          <button id="btn-add-course" class="dash-btn dash-btn-success text-sm">➕ Thêm khóa học</button>
         </div>
-        <button id="btn-add-course" class="admin-btn admin-btn-success text-sm">➕ Thêm khóa học</button>
-      </div>
-      <div id="courses-list" class="space-y-3"></div>
-      <div class="mt-4"><span id="msg-courses" class="text-sm font-medium"></span></div>
-    </div>
-  </div>
-
-  <!-- TAB 5: LỊCH HỌC -->
-  <div id="tab-schedule" class="max-w-6xl mx-auto px-4 mt-6 hidden">
-    <div class="bg-white rounded-xl shadow p-6">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h2 class="text-lg font-bold">📅 Quản lý Lịch học</h2>
-          <p class="text-sm text-gray-500">Mỗi lịch học thuộc một khóa học. Khi xóa khóa học, lịch học cũng xóa theo.</p>
-        </div>
-        <button id="btn-add-schedule" class="admin-btn admin-btn-success text-sm">➕ Thêm lịch học</button>
-      </div>
-      <div id="schedule-list" class="space-y-3"></div>
-      <div class="mt-4"><span id="msg-schedule" class="text-sm font-medium"></span></div>
-    </div>
-  </div>
-
-  <!-- MODAL: Form khóa học -->
-  <div id="modal-course" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6 max-h-[90vh] overflow-y-auto">
-      <h3 id="modal-course-title" class="text-lg font-bold mb-4">Thêm khóa học</h3>
-      <input type="hidden" id="course-form-id">
-      <div class="space-y-3">
-        <div><label class="admin-label">Tên khóa học *</label><input id="course-form-name" class="admin-input" placeholder="Ngữ Văn Lớp 6"></div>
-        <div class="grid grid-cols-2 gap-3">
-          <div><label class="admin-label">Tên ngắn</label><input id="course-form-short" class="admin-input" placeholder="LỚP 6"></div>
-          <div><label class="admin-label">Emoji</label><input id="course-form-emoji" class="admin-input" placeholder="📖" value="📖"></div>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div><label class="admin-label">Màu</label><select id="course-form-color" class="admin-input"><option value="blue">blue</option><option value="green">green</option><option value="purple">purple</option><option value="orange">orange</option></select></div>
-          <div><label class="admin-label">Sub title</label><input id="course-form-sub" class="admin-input" placeholder="Nền tảng vững chắc"></div>
-        </div>
-        <div><label class="admin-label">Mô tả</label><textarea id="course-form-desc" class="admin-input" rows="2" placeholder="Mô tả khóa học..."></textarea></div>
-        <div><label class="admin-label">Tính năng (mỗi dòng một)</label><textarea id="course-form-features" class="admin-input" rows="3" placeholder="Tính năng 1&#10;Tính năng 2"></textarea></div>
-        <div class="grid grid-cols-2 gap-3">
-          <div><label class="admin-label">Thời lượng</label><input id="course-form-duration" class="admin-input" value="2h/buổi"></div>
-          <div><label class="admin-label">Số HV tối đa</label><input id="course-form-max" class="admin-input" value="Tối đa 10"></div>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div><label class="admin-label">Buổi/tuần</label><input id="course-form-sessions" class="admin-input" value="2 buổi/tuần"></div>
-          <div><label class="admin-label">Học phí</label><input id="course-form-price" class="admin-input" placeholder="2.000.000đ/tháng"></div>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div><label class="admin-label">Trạng thái</label><select id="course-form-status" class="admin-input"><option value="available">Còn chỗ</option><option value="full">Hết chỗ</option></select></div>
-          <div class="flex items-end gap-2"><label class="toggle"><input type="checkbox" id="course-form-hidden"><span class="slider"></span></label><span class="text-sm text-gray-500">Ẩn khóa học</span></div>
-        </div>
-        <div><label class="admin-label">Thứ tự</label><input id="course-form-sort" type="number" class="admin-input" value="0"></div>
-      </div>
-      <div class="mt-5 flex items-center justify-end gap-3">
-        <button id="btn-course-cancel" class="admin-btn bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">Hủy</button>
-        <button id="btn-course-save" class="admin-btn admin-btn-primary text-sm">💾 Lưu</button>
+        <div id="courses-list" class="space-y-3"></div>
+        <div class="mt-4"><span id="msg-courses" class="toast"></span></div>
       </div>
     </div>
-  </div>
 
-  <!-- MODAL: Form lịch học -->
-  <div id="modal-schedule" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 max-h-[90vh] overflow-y-auto">
-      <h3 id="modal-schedule-title" class="text-lg font-bold mb-4">Thêm lịch học</h3>
-      <input type="hidden" id="schedule-form-id">
-      <div class="space-y-3">
-        <div><label class="admin-label">Thuộc khóa học</label><select id="schedule-form-course" class="admin-input"><option value="">-- Chọn khóa học --</option></select></div>
-        <div><label class="admin-label">Tên lớp *</label><input id="schedule-form-name" class="admin-input" placeholder="Lớp 6A"></div>
-        <div class="grid grid-cols-2 gap-3">
-          <div><label class="admin-label">Thời gian</label><input id="schedule-form-time" class="admin-input" placeholder="18:00 - 20:00"></div>
-          <div><label class="admin-label">Ngày học</label><input id="schedule-form-days" class="admin-input" placeholder="Thứ 2, 4, 6"></div>
+    <!-- TAB 5: LỊCH HỌC -->
+    <div id="tab-schedule" class="tab-panel">
+      <div class="dash-card">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h2 class="dash-card-title">📅 Quản lý Lịch học</h2>
+            <p class="dash-card-subtitle">Mỗi lịch học thuộc một khóa học</p>
+          </div>
+          <button id="btn-add-schedule" class="dash-btn dash-btn-success text-sm">➕ Thêm lịch học</button>
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div><label class="admin-label">Trạng thái</label><select id="schedule-form-status" class="admin-input"><option value="available">Còn chỗ</option><option value="almost_full">Sắp đầy</option><option value="full">Đầy</option></select></div>
-          <div><label class="admin-label">Text trạng thái</label><input id="schedule-form-statustext" class="admin-input" placeholder="🟢 Còn chỗ"></div>
-        </div>
-        <div class="flex items-center gap-2"><label class="toggle"><input type="checkbox" id="schedule-form-hidden"><span class="slider"></span></label><span class="text-sm text-gray-500">Ẩn lịch học</span></div>
-        <div><label class="admin-label">Thứ tự</label><input id="schedule-form-sort" type="number" class="admin-input" value="0"></div>
-      </div>
-      <div class="mt-5 flex items-center justify-end gap-3">
-        <button id="btn-schedule-cancel" class="admin-btn bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">Hủy</button>
-        <button id="btn-schedule-save" class="admin-btn admin-btn-primary text-sm">💾 Lưu</button>
+        <div id="schedule-list" class="space-y-3"></div>
+        <div class="mt-4"><span id="msg-schedule" class="toast"></span></div>
       </div>
     </div>
-  </div>
 
-  <!-- TAB 6: ĐĂNG KÝ -->
-  <div id="tab-registrations" class="max-w-6xl mx-auto px-4 mt-6 hidden">
-    <div class="bg-white rounded-xl shadow p-6">
-      <h2 class="text-lg font-bold mb-4">📋 Danh sách Học sinh Đăng ký</h2>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="bg-gray-50 text-left">
-              <th class="px-3 py-2">#</th>
-              <th class="px-3 py-2">Phụ huynh</th>
-              <th class="px-3 py-2">SĐT</th>
-              <th class="px-3 py-2">Con</th>
-              <th class="px-3 py-2">Lớp</th>
-              <th class="px-3 py-2">Ghi chú</th>
-              <th class="px-3 py-2">Ngày</th>
-              <th class="px-3 py-2">Trạng thái</th>
-            </tr>
-          </thead>
-          <tbody id="registrations-list"></tbody>
-        </table>
+    <!-- MODAL: Form khóa học -->
+    <div id="modal-course" class="modal-backdrop">
+      <div class="modal-card">
+        <h3 id="modal-course-title" class="dash-card-title mb-4">Thêm khóa học</h3>
+        <input type="hidden" id="course-form-id">
+        <div class="space-y-3">
+          <div><label class="dash-label">Tên khóa học *</label><input id="course-form-name" class="dash-input" placeholder="Ngữ Văn Lớp 6"></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="dash-label">Tên ngắn</label><input id="course-form-short" class="dash-input" placeholder="LỚP 6"></div>
+            <div><label class="dash-label">Emoji</label><input id="course-form-emoji" class="dash-input" placeholder="📖" value="📖"></div>
+          </div>
+          <div>
+            <label class="dash-label">Màu</label>
+            <div class="flex gap-2 mt-1">
+              <div class="color-dot selected" data-color="blue" style="background:#3b82f6" title="blue"></div>
+              <div class="color-dot" data-color="green" style="background:#22c55e" title="green"></div>
+              <div class="color-dot" data-color="purple" style="background:#a855f7" title="purple"></div>
+              <div class="color-dot" data-color="orange" style="background:#f97316" title="orange"></div>
+            </div>
+            <input type="hidden" id="course-form-color" value="blue">
+          </div>
+          <div><label class="dash-label">Sub title</label><input id="course-form-sub" class="dash-input" placeholder="Nền tảng vững chắc"></div>
+          <div><label class="dash-label">Mô tả</label><textarea id="course-form-desc" class="dash-input" rows="2" placeholder="Mô tả khóa học..."></textarea></div>
+          <div><label class="dash-label">Tính năng (mỗi dòng một)</label><textarea id="course-form-features" class="dash-input" rows="3" placeholder="Tính năng 1&#10;Tính năng 2"></textarea></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="dash-label">Thời lượng</label><input id="course-form-duration" class="dash-input" value="2h/buổi"></div>
+            <div><label class="dash-label">Số HV tối đa</label><input id="course-form-max" class="dash-input" value="Tối đa 10"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="dash-label">Buổi/tuần</label><input id="course-form-sessions" class="dash-input" value="2 buổi/tuần"></div>
+            <div><label class="dash-label">Học phí</label><input id="course-form-price" class="dash-input" placeholder="2.000.000đ/tháng"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="dash-label">Trạng thái</label><select id="course-form-status" class="dash-input"><option value="available">Còn chỗ</option><option value="full">Hết chỗ</option></select></div>
+            <div class="flex items-end gap-2"><label class="toggle"><input type="checkbox" id="course-form-hidden"><span class="slider"></span></label><span class="text-sm text-gray-400">Ẩn khóa học</span></div>
+          </div>
+          <div><label class="dash-label">Thứ tự</label><input id="course-form-sort" type="number" class="dash-input" value="0"></div>
+        </div>
+        <div class="mt-6 flex items-center justify-end gap-3">
+          <button id="btn-course-cancel" class="dash-btn dash-btn-ghost btn-sm">Hủy</button>
+          <button id="btn-course-save" class="dash-btn dash-btn-primary text-sm">💾 Lưu</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- TAB 7: ĐỔI MẬT KHẨU -->
-  <div id="tab-password" class="max-w-6xl mx-auto px-4 mt-6 hidden">
-    <div class="bg-white rounded-xl shadow p-6 max-w-md mx-auto">
-      <h2 class="text-lg font-bold mb-4">🔐 Đổi Mật Khẩu Admin</h2>
-      <p class="text-sm text-gray-500 mb-4">Nhập mật khẩu hiện tại và mật khẩu mới để thay đổi.</p>
-      <div class="space-y-4">
-        <div>
-          <label class="admin-label">Mật khẩu hiện tại</label>
-          <input type="password" id="pwd-current" class="admin-input" placeholder="Nhập mật khẩu hiện tại">
+    <!-- MODAL: Form lịch học -->
+    <div id="modal-schedule" class="modal-backdrop">
+      <div class="modal-card">
+        <h3 id="modal-schedule-title" class="dash-card-title mb-4">Thêm lịch học</h3>
+        <input type="hidden" id="schedule-form-id">
+        <div class="space-y-3">
+          <div><label class="dash-label">Thuộc khóa học</label><select id="schedule-form-course" class="dash-input"><option value="">-- Chọn khóa học --</option></select></div>
+          <div><label class="dash-label">Tên lớp *</label><input id="schedule-form-name" class="dash-input" placeholder="Lớp 6A"></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="dash-label">Thời gian</label><input id="schedule-form-time" class="dash-input" placeholder="18:00 - 20:00"></div>
+            <div><label class="dash-label">Ngày học</label><input id="schedule-form-days" class="dash-input" placeholder="Thứ 2, 4, 6"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="dash-label">Trạng thái</label><select id="schedule-form-status" class="dash-input"><option value="available">Còn chỗ</option><option value="almost_full">Sắp đầy</option><option value="full">Đầy</option></select></div>
+            <div><label class="dash-label">Text trạng thái</label><input id="schedule-form-statustext" class="dash-input" placeholder="🟢 Còn chỗ"></div>
+          </div>
+          <div class="flex items-center gap-2"><label class="toggle"><input type="checkbox" id="schedule-form-hidden"><span class="slider"></span></label><span class="text-sm text-gray-400">Ẩn lịch học</span></div>
+          <div><label class="dash-label">Thứ tự</label><input id="schedule-form-sort" type="number" class="dash-input" value="0"></div>
         </div>
-        <div>
-          <label class="admin-label">Mật khẩu mới</label>
-          <input type="password" id="pwd-new" class="admin-input" placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)">
+        <div class="mt-6 flex items-center justify-end gap-3">
+          <button id="btn-schedule-cancel" class="dash-btn dash-btn-ghost btn-sm">Hủy</button>
+          <button id="btn-schedule-save" class="dash-btn dash-btn-primary text-sm">💾 Lưu</button>
         </div>
-        <div>
-          <label class="admin-label">Xác nhận mật khẩu mới</label>
-          <input type="password" id="pwd-confirm" class="admin-input" placeholder="Nhập lại mật khẩu mới">
-        </div>
-        <p id="pwd-error" class="text-red-500 text-sm hidden"></p>
-        <p id="pwd-success" class="text-green-600 text-sm hidden"></p>
-        <button id="btn-change-password" class="admin-btn admin-btn-primary w-full">🔑 Đổi mật khẩu</button>
       </div>
+    </div>
+
+    <!-- TAB 6: ĐĂNG KÝ -->
+    <div id="tab-registrations" class="tab-panel">
+      <div class="dash-card">
+        <h2 class="dash-card-title">📋 Danh sách Học sinh Đăng ký</h2>
+        <p class="dash-card-subtitle">Xem và cập nhật trạng thái đăng ký</p>
+        <div class="overflow-x-auto">
+          <table class="dash-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Phụ huynh</th>
+                <th>SĐT</th>
+                <th>Con</th>
+                <th>Lớp</th>
+                <th>Ghi chú</th>
+                <th>Ngày</th>
+                <th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody id="registrations-list"></tbody>
+          </table>
+        </div>
+        <div id="registrations-empty" class="empty-state" style="display:none">
+          <div class="empty-state-icon">📭</div>
+          <p>Chưa có đăng ký nào</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 7: ĐỔI MẬT KHẨU -->
+    <div id="tab-password" class="tab-panel">
+      <div class="dash-card max-w-md mx-auto">
+        <h2 class="dash-card-title">🔐 Đổi Mật Khẩu</h2>
+        <p class="dash-card-subtitle">Nhập mật khẩu hiện tại và mật khẩu mới</p>
+
+        <div class="space-y-4">
+          <div>
+            <label class="dash-label">Mật khẩu hiện tại</label>
+            <div class="relative">
+              <input type="password" id="pwd-current" class="dash-input pr-12" placeholder="Nhập mật khẩu hiện tại">
+              <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60" data-toggle="pwd-current">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div>
+            <label class="dash-label">Mật khẩu mới</label>
+            <div class="relative">
+              <input type="password" id="pwd-new" class="dash-input pr-12" placeholder="Tối thiểu 6 ký tự" oninput="checkPwdStrength(this.value)">
+              <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60" data-toggle="pwd-new">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              </button>
+            </div>
+            <div class="pwd-strength" id="pwd-strength">
+              <div class="pwd-strength-bar"></div>
+              <div class="pwd-strength-bar"></div>
+              <div class="pwd-strength-bar"></div>
+              <div class="pwd-strength-bar"></div>
+            </div>
+            <div class="mt-2 space-y-1">
+              <div class="pwd-req" data-req="len"><div class="req-icon fail">✗</div> Ít nhất 6 ký tự</div>
+              <div class="pwd-req" data-req="upper"><div class="req-icon fail">✗</div> Chữ hoa (A-Z)</div>
+              <div class="pwd-req" data-req="lower"><div class="req-icon fail">✗</div> Chữ thường (a-z)</div>
+              <div class="pwd-req" data-req="num"><div class="req-icon fail">✗</div> Số (0-9)</div>
+            </div>
+          </div>
+          <div>
+            <label class="dash-label">Xác nhận mật khẩu mới</label>
+            <div class="relative">
+              <input type="password" id="pwd-confirm" class="dash-input pr-12" placeholder="Nhập lại mật khẩu mới">
+              <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60" data-toggle="pwd-confirm">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              </button>
+            </div>
+            <p id="pwd-match" class="text-xs mt-1" style="display:none"></p>
+          </div>
+          <p id="pwd-error" class="text-red-400 text-sm" style="display:none"></p>
+          <button id="btn-change-password" class="dash-btn dash-btn-primary w-full justify-center mt-2">
+            <span class="btn-text">🔑 Đổi mật khẩu</span>
+            <span class="spinner"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Password change success overlay -->
+  <div class="success-overlay" id="pwd-success-overlay">
+    <div class="text-center">
+      <div class="success-icon">
+        <svg class="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+      </div>
+      <h3 class="text-white font-display text-xl font-bold mb-2">Đổi mật khẩu thành công!</h3>
+      <p class="text-gray-400 text-sm mb-4">Đang chuyển hướng đến trang đăng nhập...</p>
+      <div class="w-48 h-1 bg-white/10 rounded-full mx-auto overflow-hidden">
+        <div class="h-full bg-gradient-to-r from-brand-500 to-purple-500 rounded-full" id="pwd-redirect-bar" style="width:0%;transition:width 3s linear"></div>
+      </div>
+      <p class="text-gray-500 text-xs mt-2" id="pwd-redirect-countdown">3s</p>
     </div>
   </div>
 

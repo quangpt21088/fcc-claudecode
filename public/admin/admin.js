@@ -5,7 +5,7 @@ if (!TOKEN) { window.location.href = 'login.html'; throw new Error('NO_TOKEN'); 
 const API = (path, opts = {}) =>
   fetch(path, {
     ...opts,
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${TOKEN}`, ...opts.headers },
+    headers: { 'Authorization': `Bearer ${TOKEN}`, ...opts.headers },
   });
 
 // ─── Logout ───────────────────────────────────────────────────
@@ -14,26 +14,30 @@ document.getElementById('logout-btn').addEventListener('click', () => {
   window.location.href = 'login.html';
 });
 
-// ─── Tabs ─────────────────────────────────────────────────────
-const tabBtns = document.querySelectorAll('.tab-btn');
-const tabs = {
-  content: document.getElementById('tab-content'),
-  general: document.getElementById('tab-general'),
-  titles: document.getElementById('tab-titles'),
-  teacher: document.getElementById('tab-teacher'),
-  courses: document.getElementById('tab-courses'),
-  schedule: document.getElementById('tab-schedule'),
-  registrations: document.getElementById('tab-registrations'),
-  password: document.getElementById('tab-password'),
-};
-tabBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    tabBtns.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    Object.values(tabs).forEach(t => { if(t) t.classList.add('hidden'); });
-    if(tabs[btn.dataset.tab]) tabs[btn.dataset.tab].classList.remove('hidden');
+// ─── Sidebar navigation ───────────────────────────────────────
+const navItems = document.querySelectorAll('.nav-item');
+const tabPanels = document.querySelectorAll('.tab-panel');
+const sidebar = document.getElementById('sidebar');
+const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+
+navItems.forEach(item => {
+  item.addEventListener('click', () => {
+    navItems.forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+    tabPanels.forEach(p => p.classList.remove('active'));
+    const panel = document.getElementById('tab-' + item.dataset.tab);
+    if (panel) panel.classList.add('active');
+    // Close mobile sidebar
+    sidebar.classList.remove('open');
+    // Load registrations when tab opened
+    if (item.dataset.tab === 'registrations') loadRegistrations();
   });
 });
+
+// Mobile menu toggle
+if (mobileMenuBtn) {
+  mobileMenuBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
+}
 
 // ─── Helpers ──────────────────────────────────────────────────
 function esc(s){ return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -49,9 +53,16 @@ function checkAuth(res) {
 }
 
 function showMsg(el, text, isError) {
-  el.classList.remove('text-red-600','text-green-600');
-  el.classList.add(isError ? 'text-red-600' : 'text-green-600');
+  el.classList.remove('show', 'toast-success', 'toast-error');
+  el.classList.add('show', isError ? 'toast-error' : 'toast-success');
   el.textContent = text;
+}
+
+// Button loading state
+function setBtnLoading(btn, loading) {
+  if (!btn) return;
+  btn.classList.toggle('loading', loading);
+  btn.disabled = loading;
 }
 
 // ─── State ────────────────────────────────────────────────────
@@ -59,6 +70,65 @@ let allCourses = [];
 let allSchedule = [];
 let allSettings = {};
 let titleStyles = {};
+
+// ─── File upload helper (FormData → /api/admin/upload) ────────
+async function uploadFile(file) {
+  if (!file) return null;
+  if (file.size > 2 * 1024 * 1024) throw new Error('Ảnh quá lớn (tối đa 2MB)');
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetch('/api/admin/upload', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${TOKEN}` },
+    body: form,
+  });
+  if (checkAuth(res)) throw new Error('AUTH');
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Upload thất bại');
+  return data.url;
+}
+
+// ─── Upload zone setup ────────────────────────────────────────
+function setupUploadZone(zoneId, fileInputId, onUpload) {
+  const zone = document.getElementById(zoneId);
+  const input = document.getElementById(fileInputId);
+  if (!zone || !input) return;
+
+  zone.addEventListener('click', () => input.click());
+  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0], onUpload);
+  });
+  input.addEventListener('change', () => {
+    if (input.files[0]) handleFile(input.files[0], onUpload);
+  });
+
+  async function handleFile(file, cb) {
+    try {
+      const url = await uploadFile(file);
+      if (cb) cb(url);
+    } catch (e) {
+      if (e.message !== 'AUTH') alert(e.message || 'Lỗi upload');
+    }
+  }
+}
+
+setupUploadZone('logo-upload-zone', 'logo-file-input', (url) => {
+  document.getElementById('f-logo-url').value = url;
+  const preview = document.getElementById('logo-preview');
+  preview.src = url;
+  preview.style.display = 'block';
+});
+
+setupUploadZone('teacher-upload-zone', 'teacher-file-input', (url) => {
+  document.getElementById('f-teacher-photo').value = url;
+  const preview = document.getElementById('teacher-photo-preview');
+  preview.src = url;
+  preview.style.display = 'block';
+});
 
 // ─── Load dữ liệu ────────────────────────────────────────────
 async function loadData() {
@@ -102,14 +172,14 @@ async function loadData() {
     setVal('f-why-title', allSettings.why_title);
 
     // Logo preview
-    var logoPreview = document.getElementById('logo-preview');
-    if(logoPreview && allSettings.logo_url){
+    const logoPreview = document.getElementById('logo-preview');
+    if (logoPreview && allSettings.logo_url) {
       logoPreview.src = allSettings.logo_url;
       logoPreview.style.display = 'block';
     }
 
     const photoPreview = document.getElementById('teacher-photo-preview');
-    if(photoPreview && allSettings.teacher_photo){
+    if (photoPreview && allSettings.teacher_photo) {
       photoPreview.src = allSettings.teacher_photo;
       photoPreview.style.display = 'block';
     }
@@ -129,6 +199,7 @@ async function loadData() {
     // Title styles
     try {
       const stylesRes = await API('/api/admin/title-styles');
+      if (checkAuth(stylesRes)) return;
       titleStyles = await stylesRes.json() || {};
     } catch(e) { titleStyles = {}; }
     updateSavedStylesList();
@@ -143,53 +214,52 @@ async function loadData() {
 
 function renderCourses() {
   const container = document.getElementById('courses-list');
-  if(!container) return;
+  if (!container) return;
 
-  if(allCourses.length === 0){
-    container.innerHTML = '<p class="text-gray-400 text-sm text-center py-8">Chưa có khóa học nào. Nhấn "Thêm khóa học" để tạo.</p>';
+  if (allCourses.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📚</div><p>Chưa có khóa học nào. Nhấn "Thêm khóa học" để tạo.</p></div>';
     return;
   }
 
-  container.innerHTML = allCourses.map((c) => {
-    const hiddenClass = c.hidden ? 'bg-gray-50 opacity-60' : '';
-    const statusBadge = c.status === 'available'
-      ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Còn chỗ</span>'
-      : '<span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded-full">Hết chỗ</span>';
-    const hiddenBadge = c.hidden
-      ? '<span class="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs font-semibold rounded-full">Đang ẩn</span>'
-      : '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">Hiển thị</span>';
+  const colorMap = { blue:'#3b82f6', green:'#22c55e', purple:'#a855f7', orange:'#f97316' };
 
-    // Count schedules for this course
+  container.innerHTML = allCourses.map((c) => {
     const schedCount = allSchedule.filter(s => s.course_id === c.id).length;
+    const statusBadge = c.status === 'available'
+      ? '<span class="badge badge-available">Còn chỗ</span>'
+      : '<span class="badge badge-full">Hết chỗ</span>';
+    const hiddenBadge = c.hidden
+      ? '<span class="badge badge-hidden">Đang ẩn</span>'
+      : '<span class="badge badge-available">Hiển thị</span>';
 
     return `
-    <div class="border rounded-lg p-4 ${hiddenClass}" data-course-id="${c.id}">
-      <div class="flex items-start justify-between gap-3">
+    <div class="course-card" data-course-id="${c.id}">
+      <div class="flex items-start gap-4">
+        <div class="course-color-bar self-stretch" style="background:${colorMap[c.color]||colorMap.blue}"></div>
         <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2 mb-1">
+          <div class="flex items-center gap-2 mb-1 flex-wrap">
             <span class="text-lg">${esc(c.emoji||'📖')}</span>
-            <span class="font-bold text-gray-800 truncate">${esc(c.name)}</span>
+            <span class="font-bold text-white truncate">${esc(c.name)}</span>
             ${statusBadge}
             ${hiddenBadge}
           </div>
-          <div class="flex items-center gap-3 text-xs text-gray-500">
+          <div class="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
             <span>${esc(c.short_name||'')}</span>
             <span>🎨 ${c.color||'blue'}</span>
             <span>🕐 ${esc(c.duration||'')}</span>
             <span>👥 ${esc(c.max_students||'')}</span>
             <span>📅 ${schedCount} lịch học</span>
           </div>
-          ${c.sub ? `<p class="text-xs text-gray-400 mt-0.5">${esc(c.sub)}</p>` : ''}
+          ${c.sub ? `<p class="text-xs text-gray-500 mt-1">${esc(c.sub)}</p>` : ''}
         </div>
         <div class="flex items-center gap-1 shrink-0">
-          <button class="btn-edit-course px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100" data-id="${c.id}">✏️ Sửa</button>
-          <button class="btn-del-course px-2 py-1 text-xs bg-red-50 text-red-600 rounded hover:bg-red-100" data-id="${c.id}">🗑️ Xóa</button>
+          <button class="btn-edit-course px-3 py-1.5 text-xs bg-brand-600/20 text-brand-400 rounded-lg hover:bg-brand-600/30 transition" data-id="${c.id}">✏️ Sửa</button>
+          <button class="btn-del-course px-3 py-1.5 text-xs bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition" data-id="${c.id}">🗑️ Xóa</button>
         </div>
       </div>
     </div>`;
   }).join('');
 
-  // Bind events
   container.querySelectorAll('.btn-edit-course').forEach(btn => {
     btn.addEventListener('click', () => openCourseModal(parseInt(btn.dataset.id)));
   });
@@ -205,14 +275,20 @@ function openCourseModal(courseId) {
   const isEdit = !!courseId;
   title.textContent = isEdit ? 'Sửa khóa học' : 'Thêm khóa học';
 
-  if(isEdit) {
+  // Update color dots
+  document.querySelectorAll('.color-dot').forEach(d => {
+    d.classList.toggle('selected', d.dataset.color === (isEdit ? allCourses.find(x=>x.id===courseId)?.color : 'blue'));
+  });
+
+  if (isEdit) {
     const c = allCourses.find(x => x.id === courseId);
-    if(!c) return;
+    if (!c) return;
     document.getElementById('course-form-id').value = c.id;
     document.getElementById('course-form-name').value = c.name || '';
     document.getElementById('course-form-short').value = c.short_name || '';
     document.getElementById('course-form-emoji').value = c.emoji || '📖';
     document.getElementById('course-form-color').value = c.color || 'blue';
+    document.querySelectorAll('.color-dot').forEach(d => d.classList.toggle('selected', d.dataset.color === c.color));
     document.getElementById('course-form-sub').value = c.sub || '';
     document.getElementById('course-form-desc').value = c.description || '';
     const features = Array.isArray(c.features) ? c.features.join('\n') : '';
@@ -226,34 +302,29 @@ function openCourseModal(courseId) {
     document.getElementById('course-form-sort').value = c.sort_order || 0;
   } else {
     document.getElementById('course-form-id').value = '';
-    document.getElementById('course-form-name').value = '';
-    document.getElementById('course-form-short').value = '';
+    ['course-form-name','course-form-short','course-form-sub','course-form-desc','course-form-features','course-form-price'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
     document.getElementById('course-form-emoji').value = '📖';
     document.getElementById('course-form-color').value = 'blue';
-    document.getElementById('course-form-sub').value = '';
-    document.getElementById('course-form-desc').value = '';
-    document.getElementById('course-form-features').value = '';
     document.getElementById('course-form-duration').value = '2h/buổi';
     document.getElementById('course-form-max').value = 'Tối đa 10';
     document.getElementById('course-form-sessions').value = '2 buổi/tuần';
-    document.getElementById('course-form-price').value = '';
     document.getElementById('course-form-status').value = 'available';
     document.getElementById('course-form-hidden').checked = false;
     document.getElementById('course-form-sort').value = allCourses.length;
   }
 
-  modal.classList.remove('hidden');
-  modal.classList.add('flex');
+  modal.classList.add('show');
 }
 
 function closeCourseModal() {
-  const modal = document.getElementById('modal-course');
-  modal.classList.add('hidden');
-  modal.classList.remove('flex');
+  document.getElementById('modal-course').classList.remove('show');
 }
 
 async function saveCourse() {
   const msg = document.getElementById('msg-courses');
+  const btn = document.getElementById('btn-course-save');
   const id = document.getElementById('course-form-id').value;
   const featuresText = document.getElementById('course-form-features').value;
   const features = featuresText.split('\n').map(f => f.trim()).filter(f => f);
@@ -275,27 +346,24 @@ async function saveCourse() {
     sort_order: parseInt(document.getElementById('course-form-sort').value) || 0,
   };
 
-  if(!body.name) { showMsg(msg, '❌ Tên khóa học là bắt buộc', true); return; }
+  if (!body.name) { showMsg(msg, '❌ Tên khóa học là bắt buộc', true); return; }
 
+  setBtnLoading(btn, true);
   try {
     let res;
-    if(id) {
-      // UPDATE
-      res = await API(`/api/admin/courses/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+    if (id) {
+      res = await API(`/api/admin/courses/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     } else {
-      // CREATE
-      res = await API('/api/admin/courses', { method: 'POST', body: JSON.stringify(body) });
+      res = await API('/api/admin/courses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     }
-    if(checkAuth(res)) return;
+    if (checkAuth(res)) return;
     const data = await res.json().catch(() => ({}));
-    if(res.ok) {
+    if (res.ok) {
       showMsg(msg, '✅ ' + (data.message || 'Đã lưu'), false);
       closeCourseModal();
-      // Reload
       const coursesRes = await API('/api/admin/courses');
       allCourses = await coursesRes.json() || [];
       renderCourses();
-      // Also reload schedule in case cascade happened
       const schedRes = await API('/api/admin/schedule');
       allSchedule = await schedRes.json() || [];
       renderSchedule();
@@ -304,25 +372,27 @@ async function saveCourse() {
     }
   } catch(e) {
     showMsg(msg, '❌ Lỗi kết nối', true);
+  } finally {
+    setBtnLoading(btn, false);
   }
 }
 
 async function deleteCourse(id) {
   const msg = document.getElementById('msg-courses');
   const c = allCourses.find(x => x.id === id);
-  if(!c) return;
+  if (!c) return;
 
   const schedCount = allSchedule.filter(s => s.course_id === id).length;
   let confirmMsg = `Xóa khóa học "${c.name}"?`;
-  if(schedCount > 0) confirmMsg += `\n⚠️ ${schedCount} lịch học liên quan cũng sẽ bị xóa!`;
+  if (schedCount > 0) confirmMsg += `\n⚠️ ${schedCount} lịch học liên quan cũng sẽ bị xóa!`;
 
-  if(!confirm(confirmMsg)) return;
+  if (!confirm(confirmMsg)) return;
 
   try {
     const res = await API(`/api/admin/courses/${id}`, { method: 'DELETE' });
-    if(checkAuth(res)) return;
+    if (checkAuth(res)) return;
     const data = await res.json().catch(() => ({}));
-    if(res.ok) {
+    if (res.ok) {
       showMsg(msg, '✅ ' + (data.message || 'Đã xóa'), false);
       const coursesRes = await API('/api/admin/courses');
       allCourses = await coursesRes.json() || [];
@@ -344,45 +414,39 @@ async function deleteCourse(id) {
 
 function renderSchedule() {
   const container = document.getElementById('schedule-list');
-  if(!container) return;
+  if (!container) return;
 
-  if(allSchedule.length === 0){
-    container.innerHTML = '<p class="text-gray-400 text-sm text-center py-8">Chưa có lịch học nào. Nhấn "Thêm lịch học" để tạo.</p>';
+  if (allSchedule.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><p>Chưa có lịch học nào. Nhấn "Thêm lịch học" để tạo.</p></div>';
     return;
   }
 
   container.innerHTML = allSchedule.map((s) => {
-    const hiddenClass = s.hidden ? 'bg-gray-50 opacity-60' : '';
     const course = allCourses.find(c => c.id === s.course_id);
     const courseName = course ? course.name : '(không rõ)';
-    const statusColors = {
-      available: 'bg-green-100 text-green-700',
-      almost_full: 'bg-yellow-100 text-yellow-700',
-      full: 'bg-red-100 text-red-700',
-    };
-    const statusClass = statusColors[s.status] || statusColors.available;
+    const statusBadge = s.status === 'available' ? 'badge-available' : s.status === 'almost_full' ? 'badge-almost' : 'badge-full';
     const hiddenBadge = s.hidden
-      ? '<span class="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs font-semibold rounded-full">Đang ẩn</span>'
-      : '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">Hiển thị</span>';
+      ? '<span class="badge badge-hidden">Đang ẩn</span>'
+      : '<span class="badge badge-available">Hiển thị</span>';
 
     return `
-    <div class="border rounded-lg p-4 ${hiddenClass}" data-schedule-id="${s.id}">
+    <div class="schedule-card" data-schedule-id="${s.id}">
       <div class="flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2 mb-1">
-            <span class="font-bold text-gray-800">${esc(s.class_name)}</span>
-            <span class="px-2 py-0.5 ${statusClass} text-xs font-semibold rounded-full">${esc(s.status_text||'🟢 Còn chỗ')}</span>
+          <div class="flex items-center gap-2 mb-1 flex-wrap">
+            <span class="font-bold text-white">${esc(s.class_name)}</span>
+            <span class="badge ${statusBadge}">${esc(s.status_text||'🟢 Còn chỗ')}</span>
             ${hiddenBadge}
           </div>
-          <div class="flex items-center gap-3 text-xs text-gray-500">
+          <div class="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
             <span>📚 ${esc(courseName)}</span>
             <span>🕐 ${esc(s.time_slot||'')}</span>
             <span>📅 ${esc(s.days||'')}</span>
           </div>
         </div>
         <div class="flex items-center gap-1 shrink-0">
-          <button class="btn-edit-schedule px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100" data-id="${s.id}">✏️ Sửa</button>
-          <button class="btn-del-schedule px-2 py-1 text-xs bg-red-50 text-red-600 rounded hover:bg-red-100" data-id="${s.id}">🗑️ Xóa</button>
+          <button class="btn-edit-schedule px-3 py-1.5 text-xs bg-brand-600/20 text-brand-400 rounded-lg hover:bg-brand-600/30 transition" data-id="${s.id}">✏️ Sửa</button>
+          <button class="btn-del-schedule px-3 py-1.5 text-xs bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition" data-id="${s.id}">🗑️ Xóa</button>
         </div>
       </div>
     </div>`;
@@ -403,14 +467,13 @@ function openScheduleModal(scheduleId) {
   const isEdit = !!scheduleId;
   title.textContent = isEdit ? 'Sửa lịch học' : 'Thêm lịch học';
 
-  // Populate course dropdown
   const courseSelect = document.getElementById('schedule-form-course');
   courseSelect.innerHTML = '<option value="">-- Chọn khóa học --</option>' +
     allCourses.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
 
-  if(isEdit) {
+  if (isEdit) {
     const s = allSchedule.find(x => x.id === scheduleId);
-    if(!s) return;
+    if (!s) return;
     document.getElementById('schedule-form-id').value = s.id;
     document.getElementById('schedule-form-course').value = s.course_id || '';
     document.getElementById('schedule-form-name').value = s.class_name || '';
@@ -422,28 +485,24 @@ function openScheduleModal(scheduleId) {
     document.getElementById('schedule-form-sort').value = s.sort_order || 0;
   } else {
     document.getElementById('schedule-form-id').value = '';
-    document.getElementById('schedule-form-course').value = '';
-    document.getElementById('schedule-form-name').value = '';
-    document.getElementById('schedule-form-time').value = '';
-    document.getElementById('schedule-form-days').value = '';
+    ['schedule-form-course','schedule-form-name','schedule-form-time','schedule-form-days','schedule-form-statustext'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
     document.getElementById('schedule-form-status').value = 'available';
-    document.getElementById('schedule-form-statustext').value = '🟢 Còn chỗ';
     document.getElementById('schedule-form-hidden').checked = false;
     document.getElementById('schedule-form-sort').value = allSchedule.length;
   }
 
-  modal.classList.remove('hidden');
-  modal.classList.add('flex');
+  modal.classList.add('show');
 }
 
 function closeScheduleModal() {
-  const modal = document.getElementById('modal-schedule');
-  modal.classList.add('hidden');
-  modal.classList.remove('flex');
+  document.getElementById('modal-schedule').classList.remove('show');
 }
 
 async function saveSchedule() {
   const msg = document.getElementById('msg-schedule');
+  const btn = document.getElementById('btn-schedule-save');
   const id = document.getElementById('schedule-form-id').value;
 
   const body = {
@@ -457,18 +516,19 @@ async function saveSchedule() {
     sort_order: parseInt(document.getElementById('schedule-form-sort').value) || 0,
   };
 
-  if(!body.class_name) { showMsg(msg, '❌ Tên lớp là bắt buộc', true); return; }
+  if (!body.class_name) { showMsg(msg, '❌ Tên lớp là bắt buộc', true); return; }
 
+  setBtnLoading(btn, true);
   try {
     let res;
-    if(id) {
-      res = await API(`/api/admin/schedule/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+    if (id) {
+      res = await API(`/api/admin/schedule/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     } else {
-      res = await API('/api/admin/schedule', { method: 'POST', body: JSON.stringify(body) });
+      res = await API('/api/admin/schedule', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     }
-    if(checkAuth(res)) return;
+    if (checkAuth(res)) return;
     const data = await res.json().catch(() => ({}));
-    if(res.ok) {
+    if (res.ok) {
       showMsg(msg, '✅ ' + (data.message || 'Đã lưu'), false);
       closeScheduleModal();
       const schedRes = await API('/api/admin/schedule');
@@ -479,21 +539,23 @@ async function saveSchedule() {
     }
   } catch(e) {
     showMsg(msg, '❌ Lỗi kết nối', true);
+  } finally {
+    setBtnLoading(btn, false);
   }
 }
 
 async function deleteSchedule(id) {
   const msg = document.getElementById('msg-schedule');
   const s = allSchedule.find(x => x.id === id);
-  if(!s) return;
+  if (!s) return;
 
-  if(!confirm(`Xóa lịch học "${s.class_name}"?`)) return;
+  if (!confirm(`Xóa lịch học "${s.class_name}"?`)) return;
 
   try {
     const res = await API(`/api/admin/schedule/${id}`, { method: 'DELETE' });
-    if(checkAuth(res)) return;
+    if (checkAuth(res)) return;
     const data = await res.json().catch(() => ({}));
-    if(res.ok) {
+    if (res.ok) {
       showMsg(msg, '✅ ' + (data.message || 'Đã xóa'), false);
       const schedRes = await API('/api/admin/schedule');
       allSchedule = await schedRes.json() || [];
@@ -507,7 +569,7 @@ async function deleteSchedule(id) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  TITLE STYLE EDITOR (giữ nguyên)
+//  TITLE STYLE EDITOR
 // ═══════════════════════════════════════════════════════════════
 const titleSelector = document.getElementById('title-selector');
 const titleFont = document.getElementById('title-font');
@@ -520,7 +582,7 @@ const titleSpacing = document.getElementById('title-spacing');
 const titlePreview = document.getElementById('title-preview');
 
 function applyStyleToPreview() {
-  if(!titlePreview) return;
+  if (!titlePreview) return;
   titlePreview.style.fontFamily = titleFont.value;
   titlePreview.style.fontSize = titleSize.value + 'px';
   titlePreview.style.fontWeight = titleWeight.value;
@@ -530,16 +592,16 @@ function applyStyleToPreview() {
 }
 
 [titleFont, titleSize, titleWeight, titleColor, titleLineHeight, titleSpacing].forEach(el => {
-  if(el) el.addEventListener('change', applyStyleToPreview);
-  if(el) el.addEventListener('input', applyStyleToPreview);
+  if (el) el.addEventListener('change', applyStyleToPreview);
+  if (el) el.addEventListener('input', applyStyleToPreview);
 });
-if(titleColorText) titleColorText.addEventListener('input', () => { titleColor.value = titleColorText.value; applyStyleToPreview(); });
-if(titleColor) titleColor.addEventListener('input', () => { titleColorText.value = titleColor.value; applyStyleToPreview(); });
+if (titleColorText) titleColorText.addEventListener('input', () => { titleColor.value = titleColorText.value; applyStyleToPreview(); });
+if (titleColor) titleColor.addEventListener('input', () => { titleColorText.value = titleColor.value; applyStyleToPreview(); });
 
-if(titleSelector) titleSelector.addEventListener('change', () => {
+if (titleSelector) titleSelector.addEventListener('change', () => {
   const key = titleSelector.value;
   const style = titleStyles[key] || {};
-  titleFont.value = style.fontFamily || 'Inter';
+  titleFont.value = style.fontFamily || 'Playfair Display';
   titleSize.value = style.fontSize || 48;
   titleWeight.value = style.fontWeight || 700;
   titleColor.value = style.color || '#ffffff';
@@ -550,10 +612,10 @@ if(titleSelector) titleSelector.addEventListener('change', () => {
 });
 
 function applyTitleStylesToPreview() {
-  if(!titlePreview) return;
+  if (!titlePreview) return;
   const key = titleSelector ? titleSelector.value : 'hero-title1';
   const style = titleStyles[key] || {};
-  titlePreview.style.fontFamily = style.fontFamily || 'Inter';
+  titlePreview.style.fontFamily = style.fontFamily || 'Playfair Display';
   titlePreview.style.fontSize = (style.fontSize || 48) + 'px';
   titlePreview.style.fontWeight = style.fontWeight || 700;
   titlePreview.style.color = style.color || '#ffffff';
@@ -563,27 +625,28 @@ function applyTitleStylesToPreview() {
 
 function updateSavedStylesList() {
   const list = document.getElementById('saved-styles-list');
-  if(!list) return;
+  if (!list) return;
   const keys = Object.keys(titleStyles);
-  if(keys.length === 0){ list.innerHTML = '<p class="text-gray-400 text-xs">Chưa có style nào được lưu.</p>'; return; }
+  if (keys.length === 0) { list.innerHTML = '<p class="text-gray-500 text-xs">Chưa có style nào được lưu.</p>'; return; }
   list.innerHTML = keys.map(k => {
     const s = titleStyles[k];
-    return `<div class="flex items-center gap-2 p-2 bg-gray-50 rounded">
+    return `<div class="flex items-center gap-3 p-2 rounded-lg bg-white/3">
       <span class="w-4 h-4 rounded" style="background:${s.color||'#fff'}"></span>
-      <span class="font-medium">${k}</span>
-      <span class="text-gray-400 text-xs">${s.fontSize||48}px ${s.fontWeight||700} ${s.fontFamily||'Inter'}</span>
+      <span class="text-white/80 text-sm font-medium">${k}</span>
+      <span class="text-gray-500 text-xs">${s.fontSize||48}px ${s.fontWeight||700} ${s.fontFamily||'Playfair Display'}</span>
     </div>`;
   }).join('');
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  SAVE HANDLERS (giữ nguyên cho content, teacher, titles)
+//  SAVE HANDLERS
 // ═══════════════════════════════════════════════════════════════
 
+// ─── Save Content ─────────────────────────────────────────────
 document.getElementById('btn-save-content')?.addEventListener('click', async () => {
   const msg = document.getElementById('msg-content');
   const btn = document.getElementById('btn-save-content');
-  btn.textContent = 'Đang lưu...'; btn.disabled = true;
+  setBtnLoading(btn, true);
   try {
     const body = {
       hero_title1: document.getElementById('f-hero-title1').value,
@@ -606,69 +669,41 @@ document.getElementById('btn-save-content')?.addEventListener('click', async () 
       footer_address: document.getElementById('f-address').value,
       footer_map: document.getElementById('f-map').value,
     };
-    const res = await API('/api/admin/content', { method: 'PUT', body: JSON.stringify(body) });
-    if(checkAuth(res)) return;
+    const res = await API('/api/admin/content', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (checkAuth(res)) return;
     const data = await res.json().catch(() => ({}));
-    msg.classList.remove('text-red-600','text-green-600');
-    if(res.ok){ msg.classList.add('text-green-600'); msg.textContent = '✅ ' + (data.message||'Đã lưu'); }
-    else { msg.classList.add('text-red-600'); msg.textContent = '❌ ' + (data.error||'Lỗi'); }
-  } catch { msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi kết nối'; }
-  finally { btn.textContent = '💾 Lưu nội dung'; btn.disabled = false; }
+    if (res.ok) showMsg(msg, '✅ ' + (data.message || 'Đã lưu'), false);
+    else showMsg(msg, '❌ ' + (data.error || 'Lỗi'), true);
+  } catch { showMsg(msg, '❌ Lỗi kết nối', true); }
+  finally { setBtnLoading(btn, false); }
 });
 
-// ─── SAVE GENERAL (logo, site name, section titles) ──────────
+// ─── Save General (logo, site name, section titles) ──────────
 document.getElementById('btn-save-general')?.addEventListener('click', async () => {
   const msg = document.getElementById('msg-general');
   const btn = document.getElementById('btn-save-general');
-  btn.textContent = 'Đang lưu...'; btn.disabled = true;
+  setBtnLoading(btn, true);
   try {
-    // Handle logo file upload
-    let logoUrl = document.getElementById('f-logo-url').value;
-    const logoFile = document.getElementById('f-logo-file');
-    if(logoFile && logoFile.files[0]){
-      const file = logoFile.files[0];
-      if(file.size > 2*1024*1024){ msg.classList.add('text-red-600'); msg.textContent = '❌ ảnh quá lớn (tối đa 2MB)'; btn.disabled=false; btn.textContent='💾 Lưu cấu hình'; return; }
-      try {
-        logoUrl = await new Promise((resolve,reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      } catch { msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi đọc file'; btn.disabled=false; btn.textContent='💾 Lưu cấu hình'; return; }
-    }
-
     const body = {
-      logo_url: logoUrl,
+      logo_url: document.getElementById('f-logo-url').value,
       site_name: document.getElementById('f-site-name').value,
       site_name_accent: document.getElementById('f-site-name-accent').value,
       approach_title: document.getElementById('f-approach-title').value,
       why_title: document.getElementById('f-why-title').value,
     };
-    const res = await API('/api/admin/content', { method: 'PUT', body: JSON.stringify(body) });
-    if(checkAuth(res)) return;
+    const res = await API('/api/admin/content', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (checkAuth(res)) return;
     const data = await res.json().catch(() => ({}));
-    msg.classList.remove('text-red-600','text-green-600');
-    if(res.ok){ msg.classList.add('text-green-600'); msg.textContent = '✅ ' + (data.message||'Đã lưu'); }
-    else { msg.classList.add('text-red-600'); msg.textContent = '❌ ' + (data.error||'Lỗi'); }
-  } catch { msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi kết nối'; }
-  finally { btn.textContent = '💾 Lưu cấu hình'; btn.disabled = false; }
+    if (res.ok) showMsg(msg, '✅ ' + (data.message || 'Đã lưu'), false);
+    else showMsg(msg, '❌ ' + (data.error || 'Lỗi'), true);
+  } catch { showMsg(msg, '❌ Lỗi kết nối', true); }
+  finally { setBtnLoading(btn, false); }
 });
 
-// Logo file input preview
-document.getElementById('f-logo-file')?.addEventListener('change', function(){
-  if(this.files[0]){
-    const reader = new FileReader();
-    reader.onload = function(e){
-      const preview = document.getElementById('logo-preview');
-      if(preview){ preview.src = e.target.result; preview.style.display = 'block'; }
-    };
-    reader.readAsDataURL(this.files[0]);
-  }
-});
-
+// ─── Save Title Style ─────────────────────────────────────────
 document.getElementById('btn-save-title-style')?.addEventListener('click', async () => {
   const msg = document.getElementById('msg-titles');
+  const btn = document.getElementById('btn-save-title-style');
   const key = titleSelector.value;
   titleStyles[key] = {
     fontFamily: titleFont.value,
@@ -678,53 +713,39 @@ document.getElementById('btn-save-title-style')?.addEventListener('click', async
     lineHeight: titleLineHeight.value,
     letterSpacing: titleSpacing.value,
   };
+  setBtnLoading(btn, true);
   try {
-    const res = await API('/api/admin/title-styles', { method: 'PUT', body: JSON.stringify(titleStyles) });
-    if(checkAuth(res)) return;
-    if(res.ok){ msg.classList.remove('text-red-600'); msg.classList.add('text-green-600'); msg.textContent = '✅ Đã lưu style'; }
-    else { msg.classList.remove('text-green-600'); msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi'; }
-  } catch { msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi kết nối'; }
+    const res = await API('/api/admin/title-styles', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(titleStyles) });
+    if (checkAuth(res)) return;
+    if (res.ok) showMsg(msg, '✅ Đã lưu style', false);
+    else showMsg(msg, '❌ Lỗi', true);
+  } catch { showMsg(msg, '❌ Lỗi kết nối', true); }
+  finally { setBtnLoading(btn, false); }
   updateSavedStylesList();
 });
 
 document.getElementById('btn-reset-title-style')?.addEventListener('click', async () => {
+  const msg = document.getElementById('msg-titles');
   const key = titleSelector.value;
   delete titleStyles[key];
-  titleFont.value = 'Inter'; titleSize.value = 48; titleWeight.value = 700;
+  titleFont.value = 'Playfair Display'; titleSize.value = 48; titleWeight.value = 700;
   titleColor.value = '#ffffff'; titleColorText.value = '#ffffff';
   titleLineHeight.value = '1.4'; titleSpacing.value = '0em';
   applyStyleToPreview();
   updateSavedStylesList();
-  const msg = document.getElementById('msg-titles');
-  // Lưu lên server để F5 vẫn giữ trạng thái reset
   try {
-    const res = await API('/api/admin/title-styles', { method: 'PUT', body: JSON.stringify(titleStyles) });
-    if(checkAuth(res)) return;
-    if(res.ok){ msg.classList.remove('text-red-600'); msg.classList.add('text-green-600'); msg.textContent = '🔄 Đã reset'; }
-    else { msg.classList.remove('text-green-600'); msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi lưu'; }
-  } catch { msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi kết nối'; }
+    const res = await API('/api/admin/title-styles', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(titleStyles) });
+    if (checkAuth(res)) return;
+    if (res.ok) showMsg(msg, '🔄 Đã reset', false);
+    else showMsg(msg, '❌ Lỗi lưu', true);
+  } catch { showMsg(msg, '❌ Lỗi kết nối', true); }
 });
 
+// ─── Save Teacher ──────────────────────────────────────────────
 document.getElementById('btn-save-teacher')?.addEventListener('click', async () => {
   const msg = document.getElementById('msg-teacher');
   const btn = document.getElementById('btn-save-teacher');
-  btn.textContent = 'Đang lưu...'; btn.disabled = true;
-
-  let photoUrl = document.getElementById('f-teacher-photo').value;
-  const fileInput = document.getElementById('f-teacher-photo-file');
-  if(fileInput && fileInput.files[0]){
-    const file = fileInput.files[0];
-    if(file.size > 2*1024*1024){ msg.classList.add('text-red-600'); msg.textContent = '❌ ảnh quá lớn (tối đa 2MB)'; btn.disabled=false; btn.textContent='💾 Lưu giáo viên'; return; }
-    try {
-      const base64 = await new Promise((resolve,reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      photoUrl = base64;
-    } catch { msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi đọc file'; btn.disabled=false; btn.textContent='💾 Lưu giáo viên'; return; }
-  }
+  setBtnLoading(btn, true);
 
   try {
     const body = {
@@ -733,38 +754,44 @@ document.getElementById('btn-save-teacher')?.addEventListener('click', async () 
       teacher_bio: document.getElementById('f-teacher-bio').value,
       satisfaction_value: document.getElementById('f-satisfaction-value').value,
       satisfaction_label: document.getElementById('f-satisfaction-label').value,
-      teacher_photo: photoUrl,
+      teacher_photo: document.getElementById('f-teacher-photo').value,
     };
-    const res = await API('/api/admin/content', { method: 'PUT', body: JSON.stringify(body) });
-    if(checkAuth(res)) { btn.textContent = '💾 Lưu giáo viên'; btn.disabled = false; return; }
+    const res = await API('/api/admin/content', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (checkAuth(res)) return;
     const data = await res.json().catch(() => ({}));
-    msg.classList.remove('text-red-600','text-green-600');
-    if(res.ok){
-      msg.classList.add('text-green-600'); msg.textContent = '✅ ' + (data.message||'Đã lưu');
+    if (res.ok) {
+      showMsg(msg, '✅ ' + (data.message || 'Đã lưu'), false);
       const preview = document.getElementById('teacher-photo-preview');
-      if(preview && photoUrl){ preview.src = photoUrl; preview.style.display='block'; }
+      if (preview && body.teacher_photo) { preview.src = body.teacher_photo; preview.style.display = 'block'; }
+    } else {
+      showMsg(msg, '❌ ' + (data.error || 'Lỗi'), true);
     }
-    else { msg.classList.add('text-red-600'); msg.textContent = '❌ ' + (data.error||'Lỗi'); }
-  } catch { msg.classList.add('text-red-600'); msg.textContent = '❌ Lỗi kết nối'; }
-  finally { btn.textContent = '💾 Lưu giáo viên'; btn.disabled = false; }
+  } catch { showMsg(msg, '❌ Lỗi kết nối', true); }
+  finally { setBtnLoading(btn, false); }
 });
 
-// ═══════════════════════════════════════════════════════════════
-//  COURSES & SCHEDULE BUTTON BINDINGS
-// ═══════════════════════════════════════════════════════════════
+// ─── Color dots for course form ────────────────────────────────
+document.querySelectorAll('.color-dot').forEach(dot => {
+  dot.addEventListener('click', () => {
+    document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
+    dot.classList.add('selected');
+    document.getElementById('course-form-color').value = dot.dataset.color;
+  });
+});
 
+// ─── Courses & Schedule Button Bindings ───────────────────────
 document.getElementById('btn-add-course')?.addEventListener('click', () => openCourseModal(null));
 document.getElementById('btn-course-cancel')?.addEventListener('click', closeCourseModal);
 document.getElementById('btn-course-save')?.addEventListener('click', saveCourse);
-document.getElementById('modal-course')?.addEventListener('click', (e) => { if(e.target === e.currentTarget) closeCourseModal(); });
+document.getElementById('modal-course')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeCourseModal(); });
 
 document.getElementById('btn-add-schedule')?.addEventListener('click', () => openScheduleModal(null));
 document.getElementById('btn-schedule-cancel')?.addEventListener('click', closeScheduleModal);
 document.getElementById('btn-schedule-save')?.addEventListener('click', saveSchedule);
-document.getElementById('modal-schedule')?.addEventListener('click', (e) => { if(e.target === e.currentTarget) closeScheduleModal(); });
+document.getElementById('modal-schedule')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeScheduleModal(); });
 
 // ═══════════════════════════════════════════════════════════════
-//  REGISTRATIONS (giữ nguyên)
+//  REGISTRATIONS
 // ═══════════════════════════════════════════════════════════════
 async function loadRegistrations() {
   try {
@@ -772,18 +799,24 @@ async function loadRegistrations() {
     if (checkAuth(res)) return;
     const data = await res.json();
     const tbody = document.getElementById('registrations-list');
-    if(!Array.isArray(data) || data.length === 0){ tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-gray-400">Chưa có đăng ký nào</td></tr>'; return; }
+    const empty = document.getElementById('registrations-empty');
+    if (!Array.isArray(data) || data.length === 0) {
+      tbody.innerHTML = '';
+      if (empty) empty.style.display = 'block';
+      return;
+    }
+    if (empty) empty.style.display = 'none';
     tbody.innerHTML = data.map((r, i) => `
-      <tr class="border-b hover:bg-gray-50">
-        <td class="px-3 py-2 text-gray-400">${i+1}</td>
-        <td class="px-3 py-2 font-medium">${escHtml(r.parent_name)}</td>
-        <td class="px-3 py-2">${escHtml(r.phone)}</td>
-        <td class="px-3 py-2">${escHtml(r.child_name)}</td>
-        <td class="px-3 py-2">${escHtml(r.grade)}</td>
-        <td class="px-3 py-2 text-gray-500">${escHtml(r.note||'-')}</td>
-        <td class="px-3 py-2 text-gray-400 text-xs">${new Date(r.created_at).toLocaleDateString('vi-VN')}</td>
-        <td class="px-3 py-2">
-          <button class="status-btn px-3 py-1 rounded-full text-xs font-semibold ${r.status==='contacted'?'bg-green-100 text-green-700':'bg-yellow-100 text-yellow-700'}" data-id="${r.id}" data-status="${r.status}">
+      <tr>
+        <td class="text-gray-500">${i+1}</td>
+        <td class="text-white font-medium">${escHtml(r.parent_name)}</td>
+        <td>${escHtml(r.phone)}</td>
+        <td>${escHtml(r.child_name)}</td>
+        <td>${escHtml(r.grade)}</td>
+        <td class="text-gray-400">${escHtml(r.note||'-')}</td>
+        <td class="text-gray-500 text-xs">${new Date(r.created_at).toLocaleDateString('vi-VN')}</td>
+        <td>
+          <button class="status-btn badge ${r.status==='contacted'?'badge-available':'badge-almost'}" data-id="${r.id}" data-status="${r.status}">
             ${r.status==='contacted'?'✅ Đã gọi':'⏳ Chưa liên hệ'}
           </button>
         </td>
@@ -791,67 +824,146 @@ async function loadRegistrations() {
     `).join('');
     tbody.querySelectorAll('.status-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
-        const newStatus = btn.dataset.status==='pending' ? 'contacted' : 'pending';
+        const newStatus = btn.dataset.status === 'pending' ? 'contacted' : 'pending';
         try {
-          const res = await API(`/api/admin/registrations/${btn.dataset.id}`, { method:'PUT', body: JSON.stringify({status:newStatus}) });
+          const res = await API(`/api/admin/registrations/${btn.dataset.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
           if (checkAuth(res)) return;
-          if(res.ok){ btn.dataset.status=newStatus; btn.className=`status-btn px-3 py-1 rounded-full text-xs font-semibold ${newStatus==='contacted'?'bg-green-100 text-green-700':'bg-yellow-100 text-yellow-700'}`; btn.textContent=newStatus==='contacted'?'✅ Đã gọi':'⏳ Chưa liên hệ'; }
-        } catch(e){ console.error(e); }
+          if (res.ok) {
+            btn.dataset.status = newStatus;
+            btn.className = `status-btn badge ${newStatus==='contacted'?'badge-available':'badge-almost'}`;
+            btn.textContent = newStatus === 'contacted' ? '✅ Đã gọi' : '⏳ Chưa liên hệ';
+          }
+        } catch(e) { console.error(e); }
       });
     });
-  } catch(err){ console.error('Lỗi tải đăng ký:', err); }
+  } catch(err) { console.error('Lỗi tải đăng ký:', err); }
 }
 
-// ─── Đổi mật khẩu ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  PASSWORD CHANGE — with strength meter + redirect
+// ═══════════════════════════════════════════════════════════════
+
+// Show/hide password toggles
+document.querySelectorAll('[data-toggle]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const input = document.getElementById(btn.dataset.toggle);
+    if (!input) return;
+    input.type = input.type === 'password' ? 'text' : 'password';
+  });
+});
+
+// Password strength checker
+window.checkPwdStrength = function(pwd) {
+  const reqs = {
+    len: pwd.length >= 6,
+    upper: /[A-Z]/.test(pwd),
+    lower: /[a-z]/.test(pwd),
+    num: /[0-9]/.test(pwd),
+  };
+
+  // Update requirement indicators
+  document.querySelectorAll('.pwd-req').forEach(el => {
+    const key = el.dataset.req;
+    const pass = reqs[key];
+    el.querySelector('.req-icon').className = `req-icon ${pass ? 'pass' : 'fail'}`;
+    el.querySelector('.req-icon').textContent = pass ? '✓' : '✗';
+  });
+
+  // Update strength bar
+  const score = Object.values(reqs).filter(Boolean).length;
+  const bars = document.querySelectorAll('#pwd-strength .pwd-strength-bar');
+  bars.forEach((bar, i) => {
+    bar.className = 'pwd-strength-bar';
+    if (i < score) {
+      bar.classList.add(score <= 2 ? 'weak' : score === 3 ? 'medium' : 'strong');
+    }
+  });
+
+  return score;
+};
+
+// Confirm password match indicator
+document.getElementById('pwd-confirm')?.addEventListener('input', function() {
+  const newPwd = document.getElementById('pwd-new').value;
+  const match = document.getElementById('pwd-match');
+  if (!this.value) { match.style.display = 'none'; return; }
+  match.style.display = 'block';
+  if (this.value === newPwd) {
+    match.textContent = '✅ Mật khẩu khớp';
+    match.className = 'text-xs mt-1 text-green-400';
+  } else {
+    match.textContent = '❌ Mật khẩu không khớp';
+    match.className = 'text-xs mt-1 text-red-400';
+  }
+});
+
+// Change password handler
 document.getElementById('btn-change-password')?.addEventListener('click', async () => {
   const current = document.getElementById('pwd-current').value;
   const newPwd = document.getElementById('pwd-new').value;
   const confirm = document.getElementById('pwd-confirm').value;
   const errorEl = document.getElementById('pwd-error');
-  const successEl = document.getElementById('pwd-success');
+  const btn = document.getElementById('btn-change-password');
 
-  errorEl.classList.add('hidden');
-  successEl.classList.add('hidden');
+  errorEl.style.display = 'none';
 
   if (!current || !newPwd || !confirm) {
     errorEl.textContent = '❌ Vui lòng điền đầy đủ thông tin';
-    errorEl.classList.remove('hidden');
+    errorEl.style.display = 'block';
     return;
   }
   if (newPwd.length < 6) {
     errorEl.textContent = '❌ Mật khẩu mới phải tối thiểu 6 ký tự';
-    errorEl.classList.remove('hidden');
+    errorEl.style.display = 'block';
     return;
   }
   if (newPwd !== confirm) {
     errorEl.textContent = '❌ Mật khẩu xác nhận không khớp';
-    errorEl.classList.remove('hidden');
+    errorEl.style.display = 'block';
     return;
   }
 
+  setBtnLoading(btn, true);
   try {
     const res = await API('/api/admin/change-password', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ currentPassword: current, newPassword: newPwd }),
     });
     if (checkAuth(res)) return;
     const data = await res.json().catch(() => ({}));
     if (res.ok) {
-      successEl.textContent = '✅ ' + (data.message || 'Đã đổi mật khẩu thành công');
-      successEl.classList.remove('hidden');
-      document.getElementById('pwd-current').value = '';
-      document.getElementById('pwd-new').value = '';
-      document.getElementById('pwd-confirm').value = '';
+      // Clear token and show success overlay
+      localStorage.removeItem('admin_token');
+      const overlay = document.getElementById('pwd-success-overlay');
+      const bar = document.getElementById('pwd-redirect-bar');
+      const countdown = document.getElementById('pwd-redirect-countdown');
+      overlay.classList.add('show');
+      // Animate progress bar
+      requestAnimationFrame(() => { bar.style.width = '100%'; });
+      // Countdown
+      let secs = 3;
+      countdown.textContent = secs + 's';
+      const timer = setInterval(() => {
+        secs--;
+        if (secs <= 0) {
+          clearInterval(timer);
+          window.location.href = 'login.html';
+        } else {
+          countdown.textContent = secs + 's';
+        }
+      }, 1000);
     } else {
       errorEl.textContent = '❌ ' + (data.error || 'Lỗi');
-      errorEl.classList.remove('hidden');
+      errorEl.style.display = 'block';
     }
   } catch (e) {
     errorEl.textContent = '❌ Lỗi kết nối';
-    errorEl.classList.remove('hidden');
+    errorEl.style.display = 'block';
+  } finally {
+    setBtnLoading(btn, false);
   }
 });
 
 // ─── Init ─────────────────────────────────────────────────────
 loadData();
-tabBtns.forEach(btn => { btn.addEventListener('click', () => { if(btn.dataset.tab==='registrations') loadRegistrations(); }); });
