@@ -26,32 +26,49 @@
     html { scroll-behavior:smooth; }
     body { font-family:'Source Sans 3',sans-serif; }
 
+    /* ── Design Tokens ── */
+    :root {
+      --section-py: 7rem;
+      --container-px: clamp(1rem, 4vw, 2rem);
+      --display-leading: 1.08;
+      --body-leading: 1.7;
+      --heading-tracking: -0.02em;
+      --body-tracking: 0.01em;
+    }
+
+    @media (max-width: 768px) {
+      :root { --section-py: 4rem; }
+    }
+
     /* ── Noise texture overlay ── */
     .noise::before {
       content:''; position:fixed; inset:0; z-index:9999; pointer-events:none;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
       background-repeat: repeat; background-size: 256px;
     }
 
-    /* ── Reveal animations ── */
-    .reveal { opacity:0; transform:translateY(48px); transition:opacity 0.9s cubic-bezier(.22,1,.36,1),transform 0.9s cubic-bezier(.22,1,.36,1); }
+    /* ── Reveal animations (refined easing) ── */
+    .reveal { opacity:0; transform:translateY(32px); transition:opacity 1s cubic-bezier(.16,1,.3,1),transform 1s cubic-bezier(.16,1,.3,1); }
     .reveal.visible { opacity:1; transform:translateY(0); }
-    .reveal-left { opacity:0; transform:translateX(-60px); transition:opacity 0.9s cubic-bezier(.22,1,.36,1),transform 0.9s cubic-bezier(.22,1,.36,1); }
+    .reveal-left { opacity:0; transform:translateX(-40px); transition:opacity 1s cubic-bezier(.16,1,.3,1),transform 1s cubic-bezier(.16,1,.3,1); }
     .reveal-left.visible { opacity:1; transform:translateX(0); }
-    .reveal-right { opacity:0; transform:translateX(60px); transition:opacity 0.9s cubic-bezier(.22,1,.36,1),transform 0.9s cubic-bezier(.22,1,.36,1); }
+    .reveal-right { opacity:0; transform:translateX(40px); transition:opacity 1s cubic-bezier(.16,1,.3,1),transform 1s cubic-bezier(.16,1,.3,1); }
     .reveal-right.visible { opacity:1; transform:translateX(0); }
-    .reveal-scale { opacity:0; transform:scale(0.9); transition:opacity 0.7s cubic-bezier(.22,1,.36,1),transform 0.7s cubic-bezier(.22,1,.36,1); }
+    .reveal-scale { opacity:0; transform:scale(0.95); transition:opacity 0.8s cubic-bezier(.16,1,.3,1),transform 0.8s cubic-bezier(.16,1,.3,1); }
     .reveal-scale.visible { opacity:1; transform:scale(1); }
 
+    /* ── Section spacing utility ── */
+    .section-py { padding-top: var(--section-py); padding-bottom: var(--section-py); }
+
     /* ── Header ── */
-    #header.shrink { padding-top:0.5rem!important; padding-bottom:0.5rem!important; background:rgba(30,42,94,0.92)!important; backdrop-filter:blur(20px); box-shadow:0 4px 40px rgba(0,0,0,0.4); }
+    #header.shrink { padding-top:0.5rem!important; padding-bottom:0.5rem!important; background:rgba(30,42,94,0.95)!important; backdrop-filter:blur(24px); box-shadow:0 4px 40px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.04); }
 
     /* ── Hero gradient mesh ── */
     .hero-mesh {
       background:
-        radial-gradient(ellipse 70% 50% at 20% 40%, rgba(92,124,250,0.15) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 60% at 80% 60%, rgba(124,58,237,0.12) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(76,110,245,0.08) 0%, transparent 70%),
+        radial-gradient(ellipse 80% 60% at 25% 35%, rgba(92,124,250,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 70% at 75% 65%, rgba(124,58,237,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 50% at 50% 50%, rgba(76,110,245,0.05) 0%, transparent 70%),
         linear-gradient(180deg, #1e2a5e 0%, #172044 100%);
     }
 
@@ -67,8 +84,8 @@
     .particle-3 { animation: float-particle 12s ease-in-out 4s infinite; }
 
     /* ── Glass morphism ── */
-    .glass { background:rgba(255,255,255,0.06); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.1); }
-    .glass-strong { background:rgba(255,255,255,0.08); backdrop-filter:blur(24px); border:1px solid rgba(255,255,255,0.12); }
+    .glass { background:rgba(255,255,255,0.05); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.08); }
+    .glass-strong { background:rgba(255,255,255,0.07); backdrop-filter:blur(28px); border:1px solid rgba(255,255,255,0.1); }
 
     /* ── Course card glow ── */
     .card-glow-blue:hover { box-shadow: 0 8px 40px rgba(59,130,246,0.25), 0 0 0 1px rgba(59,130,246,0.2); }
@@ -110,11 +127,29 @@
     .badge-available { animation: badge-pulse 2s ease-in-out infinite; }
 
     /* ── Form focus glow ── */
-    .input-glow:focus { box-shadow: 0 0 0 3px rgba(92,124,250,0.25), 0 0 20px rgba(92,124,250,0.1); border-color:rgba(92,124,250,0.5); }
+    .input-glow:focus { box-shadow: 0 0 0 3px rgba(92,124,250,0.2), 0 0 24px rgba(92,124,250,0.08); border-color:rgba(92,124,250,0.4); }
+
+    /* ── Section title refined ── */
+    .section-line {
+      width:50px; height:3px;
+      background:linear-gradient(90deg, #4c6ef5, #ff922b);
+      border-radius:2px;
+      margin-top:1.25rem;
+    }
+
+    /* ── Stat counter ── */
+    .stat-card { transition: transform 0.4s cubic-bezier(.16,1,.3,1), box-shadow 0.4s ease; }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
 
     /* ── Button gradient shift ── */
-    .btn-gradient { background-size:200% 100%; transition:background-position 0.5s ease,transform 0.3s ease,box-shadow 0.3s ease; }
-    .btn-gradient:hover { background-position:100% 0; transform:translateY(-2px); }
+    .btn-gradient { background-size:200% 100%; transition:background-position 0.6s cubic-bezier(.16,1,.3,1),transform 0.3s ease,box-shadow 0.3s ease; }
+    .btn-gradient:hover { background-position:100% 0; transform:translateY(-2px); box-shadow: 0 8px 30px rgba(76,110,245,0.25); }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+      .reveal, .reveal-left, .reveal-right, .reveal-scale { opacity: 1; transform: none; }
+    }
 
     /* ── Approach dot ── */
     .approach-dot { box-shadow: 0 0 12px currentColor; }
@@ -160,7 +195,7 @@
         <img id="logo-img" src="" alt="Logo" class="w-full h-full object-cover" style="display:none"/>
         <span id="logo-fallback">N</span>
       </div>
-      <span class="text-xl font-bold tracking-tight text-white font-display"><span id="site-name">Ngữ Văn</span><span class="text-accent-400" id="site-name-accent"> Cô Hoàn</span></span>
+      <span class="text-xl font-bold tracking-tight text-white font-display"><span id="site-name">Ngữ Văn</span> <span class="text-accent-400" id="site-name-accent">Cô Hoàn</span></span>
     </a>
     <nav class="hidden md:flex items-center gap-8">
       <a href="#khoa-hoc" class="text-sm font-medium text-gray-300 hover:text-white transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-accent-400 after:transition-all after:duration-300 hover:after:w-full">Khóa học</a>
@@ -189,39 +224,55 @@
 
 <!-- ==================== HERO ==================== -->
 <section class="relative min-h-screen flex items-center overflow-hidden hero-mesh pt-24 pb-12">
-  <!-- Floating particles -->
+  <!-- Floating particles (subtle) -->
   <div class="absolute inset-0 overflow-hidden pointer-events-none">
-    <div class="particle absolute top-[20%] left-[10%] w-2 h-2 rounded-full bg-brand-400/30"></div>
-    <div class="particle-2 absolute top-[40%] right-[15%] w-3 h-3 rounded-full bg-purple-400/20"></div>
-    <div class="particle-3 absolute top-[70%] left-[30%] w-1.5 h-1.5 rounded-full bg-accent-400/30"></div>
-    <div class="particle absolute top-[30%] left-[60%] w-2 h-2 rounded-full bg-brand-300/20"></div>
-    <div class="particle-2 absolute top-[60%] left-[80%] w-2.5 h-2.5 rounded-full bg-purple-300/15"></div>
+    <div class="particle absolute top-[20%] left-[10%] w-2 h-2 rounded-full bg-brand-400/20"></div>
+    <div class="particle-2 absolute top-[40%] right-[15%] w-3 h-3 rounded-full bg-purple-400/15"></div>
+    <div class="particle-3 absolute top-[70%] left-[30%] w-1.5 h-1.5 rounded-full bg-accent-400/20"></div>
   </div>
 
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24 w-full relative z-10">
-    <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+    <div class="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
       <div>
         <div class="reveal-left">
-          <div class="inline-flex items-center gap-2 px-5 py-2.5 glass rounded-full mb-8">
+          <div class="inline-flex items-center gap-2 px-4 py-2 glass rounded-full mb-8">
             <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-            <span class="text-sm font-medium text-gray-200" id="hero-badge">Đang nhận học viên mới</span>
+            <span class="text-sm font-medium text-gray-200 tracking-wide" id="hero-badge">Đang nhận học viên mới</span>
           </div>
         </div>
-        <h1 class="reveal">
-          <span class="block text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.1] mb-2 font-display">
+        <h1 class="reveal" style="transition-delay:0.1s">
+          <span class="block text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.08] mb-3 font-display tracking-tight">
             <span class="text-white" id="hero-title1">Khơi nguồn tư duy</span>
           </span>
-          <span class="block text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.1] font-display">
+          <span class="block text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.08] font-display tracking-tight">
             <span class="text-white" id="hero-title2">Bứt phá điểm số</span>
           </span>
         </h1>
-        <p class="text-lg text-gray-400 leading-relaxed mb-8 max-w-lg reveal" id="hero-desc">Lớp Ngữ Văn THCS với phương pháp giảng dạy hiện đại, giúp học sinh hiểu sâu, nhớ lâu và đạt kết quả cao trong kỳ thi.</p>
-        <div class="flex flex-wrap gap-4 mb-10 reveal">
-          <div class="flex items-center gap-3 px-5 py-4 glass rounded-2xl hover:bg-white/10 transition-colors cursor-default"><span class="text-2xl">🏆</span><div><div class="text-xl font-bold text-white" id="hero-stat1-value">10+</div><div class="text-xs text-gray-400 font-medium" id="hero-stat1-label">Năm kinh nghiệm</div></div></div>
-          <div class="flex items-center gap-3 px-5 py-4 glass rounded-2xl hover:bg-white/10 transition-colors cursor-default"><span class="text-2xl">👨‍🎓</span><div><div class="text-xl font-bold text-white" id="hero-stat2-value">500+</div><div class="text-xs text-gray-400 font-medium" id="hero-stat2-label">Học sinh</div></div></div>
-          <div class="flex items-center gap-3 px-5 py-4 glass rounded-2xl hover:bg-white/10 transition-colors cursor-default"><span class="text-2xl">⭐</span><div><div class="text-xl font-bold text-white" id="hero-stat3-value">4.9/5</div><div class="text-xs text-gray-400 font-medium" id="hero-stat3-label">Đánh giá</div></div></div>
+        <p class="text-lg text-gray-400 leading-relaxed mb-10 max-w-lg reveal" style="transition-delay:0.2s" id="hero-desc">Lớp Ngữ Văn THCS với phương pháp giảng dạy hiện đại, giúp học sinh hiểu sâu, nhớ lâu và đạt kết quả cao trong kỳ thi.</p>
+        <div class="flex flex-wrap gap-4 mb-10 reveal" style="transition-delay:0.3s">
+          <div class="stat-card flex items-center gap-3 px-5 py-4 glass rounded-2xl cursor-default">
+            <span class="text-2xl">🏆</span>
+            <div>
+              <div class="text-2xl font-bold text-white font-display" id="hero-stat1-value">10+</div>
+              <div class="text-xs text-gray-400 font-medium tracking-wide" id="hero-stat1-label">Năm kinh nghiệm</div>
+            </div>
+          </div>
+          <div class="stat-card flex items-center gap-3 px-5 py-4 glass rounded-2xl cursor-default">
+            <span class="text-2xl">👨‍🎓</span>
+            <div>
+              <div class="text-2xl font-bold text-white font-display" id="hero-stat2-value">500+</div>
+              <div class="text-xs text-gray-400 font-medium tracking-wide" id="hero-stat2-label">Học sinh</div>
+            </div>
+          </div>
+          <div class="stat-card flex items-center gap-3 px-5 py-4 glass rounded-2xl cursor-default">
+            <span class="text-2xl">⭐</span>
+            <div>
+              <div class="text-2xl font-bold text-white font-display" id="hero-stat3-value">4.9/5</div>
+              <div class="text-xs text-gray-400 font-medium tracking-wide" id="hero-stat3-label">Đánh giá</div>
+            </div>
+          </div>
         </div>
-        <div class="flex flex-col sm:flex-row gap-4 reveal">
+        <div class="flex flex-col sm:flex-row gap-4 reveal" style="transition-delay:0.4s">
           <a href="#dang-ky" class="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-brand-600 via-brand-500 to-purple-600 text-white font-bold rounded-2xl btn-gradient shadow-xl shadow-brand-600/25 text-lg">Đăng ký ngay <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></a>
           <a href="#khoa-hoc" class="inline-flex items-center justify-center gap-2 px-8 py-4 glass text-white font-semibold rounded-2xl hover:bg-white/10 transition-all text-lg">Xem khóa học</a>
         </div>
@@ -261,46 +312,46 @@
 </section>
 
 <!-- ==================== COURSES GRID ==================== -->
-<section id="khoa-hoc" class="py-24 lg:py-32 bg-brand-950 relative">
-  <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-brand-500/5 rounded-full blur-3xl pointer-events-none"></div>
+<section id="khoa-hoc" class="section-py bg-brand-950 relative overflow-hidden">
+  <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-brand-500/[0.03] rounded-full blur-3xl pointer-events-none"></div>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-    <div class="text-center mb-20 reveal">
-      <div class="inline-flex items-center gap-2 px-5 py-2 glass rounded-full mb-5">
-        <span class="text-sm font-semibold text-brand-300 tracking-wider uppercase">Khóa học</span>
+    <div class="text-center mb-16 reveal">
+      <div class="inline-flex items-center gap-2 px-4 py-2 glass rounded-full mb-6">
+        <span class="text-xs font-bold text-brand-300 tracking-[0.15em] uppercase">Khóa học</span>
       </div>
-      <h2 class="text-3xl sm:text-5xl lg:text-6xl font-black text-white mb-5 font-display" id="courses-section-title">Chọn lớp phù hợp</h2>
-      <div class="section-line mx-auto mb-5"></div>
-      <p class="text-lg text-gray-400 max-w-2xl mx-auto" id="courses-section-desc">Tất cả các khung chương trình Ngữ Văn THCS từ Lớp 6 đến Lớp 9</p>
+      <h2 class="text-3xl sm:text-5xl lg:text-6xl font-black text-white mb-4 font-display tracking-tight" id="courses-section-title">Chọn lớp phù hợp</h2>
+      <div class="section-line mx-auto mb-6"></div>
+      <p class="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed" id="courses-section-desc">Tất cả các khung chương trình Ngữ Văn THCS từ Lớp 6 đến Lớp 9</p>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="courses-grid"></div>
   </div>
 </section>
 
 <!-- ==================== SCHEDULE ==================== -->
-<section id="lich-hoc" class="py-24 lg:py-32 bg-brand-900 relative">
-  <div class="absolute top-0 right-0 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-3xl pointer-events-none"></div>
+<section id="lich-hoc" class="section-py bg-brand-900 relative overflow-hidden">
+  <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-500/[0.03] rounded-full blur-3xl pointer-events-none"></div>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-    <div class="text-center mb-20 reveal">
-      <div class="inline-flex items-center gap-2 px-5 py-2 glass rounded-full mb-5">
-        <span class="text-sm font-semibold text-brand-300 tracking-wider uppercase">Lịch học</span>
+    <div class="text-center mb-16 reveal">
+      <div class="inline-flex items-center gap-2 px-4 py-2 glass rounded-full mb-6">
+        <span class="text-xs font-bold text-brand-300 tracking-[0.15em] uppercase">Lịch học</span>
       </div>
-      <h2 class="text-3xl sm:text-5xl lg:text-6xl font-black text-white mb-5 font-display" id="schedule-section-title">Lịch học tuần này</h2>
-      <div class="section-line mx-auto mb-5"></div>
-      <p class="text-lg text-gray-400 max-w-2xl mx-auto" id="schedule-section-desc">Cập nhật liên tục, đảm bảo học viên nắm rõ lịch trình</p>
+      <h2 class="text-3xl sm:text-5xl lg:text-6xl font-black text-white mb-4 font-display tracking-tight" id="schedule-section-title">Lịch học tuần này</h2>
+      <div class="section-line mx-auto mb-6"></div>
+      <p class="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed" id="schedule-section-desc">Cập nhật liên tục, đảm bảo học viên nắm rõ lịch trình</p>
     </div>
     <div class="reveal glass-strong rounded-3xl overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead>
             <tr class="bg-gradient-to-r from-brand-600 to-purple-600 text-white">
-              <th class="px-6 py-5 text-left text-sm font-semibold tracking-wider">Lớp</th>
-              <th class="px-6 py-5 text-left text-sm font-semibold tracking-wider">Thời gian</th>
-              <th class="px-6 py-5 text-left text-sm font-semibold tracking-wider">Ngày học</th>
-              <th class="px-6 py-5 text-center text-sm font-semibold tracking-wider">Tình trạng</th>
-              <th class="px-6 py-5 text-center text-sm font-semibold tracking-wider">Đăng ký</th>
+              <th class="px-6 py-5 text-left text-xs font-bold tracking-[0.1em] uppercase">Lớp</th>
+              <th class="px-6 py-5 text-left text-xs font-bold tracking-[0.1em] uppercase">Thời gian</th>
+              <th class="px-6 py-5 text-left text-xs font-bold tracking-[0.1em] uppercase">Ngày học</th>
+              <th class="px-6 py-5 text-center text-xs font-bold tracking-[0.1em] uppercase">Tình trạng</th>
+              <th class="px-6 py-5 text-center text-xs font-bold tracking-[0.1em] uppercase">Đăng ký</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-brand-700/30" id="schedule-body"></tbody>
+          <tbody class="divide-y divide-white/[0.04]" id="schedule-body"></tbody>
         </table>
       </div>
     </div>
@@ -308,14 +359,14 @@
 </section>
 
 <!-- ==================== APPROACH ==================== -->
-<section class="py-24 lg:py-32 bg-brand-950 relative">
-  <div class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-brand-500/5 rounded-full blur-3xl pointer-events-none"></div>
+<section class="section-py bg-brand-950 relative overflow-hidden">
+  <div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-brand-500/[0.03] rounded-full blur-3xl pointer-events-none"></div>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-    <div class="text-center mb-20 reveal">
-      <div class="inline-flex items-center gap-2 px-5 py-2 glass rounded-full mb-5">
-        <span class="text-sm font-semibold text-brand-300 tracking-wider uppercase">Phương pháp</span>
+    <div class="text-center mb-16 reveal">
+      <div class="inline-flex items-center gap-2 px-4 py-2 glass rounded-full mb-6">
+        <span class="text-xs font-bold text-brand-300 tracking-[0.15em] uppercase">Phương pháp</span>
       </div>
-      <h2 class="text-3xl sm:text-5xl lg:text-6xl font-black text-white mb-5 font-display" id="approach-title">Chương Trình Học</h2>
+      <h2 class="text-3xl sm:text-5xl lg:text-6xl font-black text-white mb-4 font-display tracking-tight" id="approach-title">Chương Trình Học</h2>
       <div class="section-line mx-auto"></div>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8" id="approach-grid"></div>
@@ -323,11 +374,11 @@
 </section>
 
 <!-- ==================== WHY ==================== -->
-<section class="py-24 lg:py-32 bg-brand-900 relative">
-  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-3xl pointer-events-none"></div>
+<section class="section-py bg-brand-900 relative overflow-hidden">
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-500/[0.03] rounded-full blur-3xl pointer-events-none"></div>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-    <div class="text-center mb-20 reveal">
-      <h2 class="text-3xl sm:text-5xl font-black text-white mb-5 font-display" id="why-title">Tại Sao Phụ Huynh Tin Tưởng?</h2>
+    <div class="text-center mb-16 reveal">
+      <h2 class="text-3xl sm:text-5xl font-black text-white mb-4 font-display tracking-tight" id="why-title">Tại Sao Phụ Huynh Tin Tưởng?</h2>
       <div class="section-line mx-auto"></div>
     </div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-6" id="why-grid"></div>
@@ -335,19 +386,19 @@
 </section>
 
 <!-- ==================== FORM ==================== -->
-<section id="dang-ky" class="py-24 lg:py-32 bg-brand-950 relative overflow-hidden">
-  <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-500/8 rounded-full blur-3xl pointer-events-none"></div>
-  <div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-purple-500/8 rounded-full blur-3xl pointer-events-none"></div>
+<section id="dang-ky" class="section-py bg-brand-950 relative overflow-hidden">
+  <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-500/[0.04] rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-purple-500/[0.04] rounded-full blur-3xl pointer-events-none"></div>
   <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-    <div class="text-center mb-14 reveal">
-      <div class="inline-flex items-center gap-2 px-5 py-2 glass rounded-full mb-5">
-        <span class="text-sm font-semibold text-brand-300 tracking-wider uppercase">Đăng ký</span>
+    <div class="text-center mb-12 reveal">
+      <div class="inline-flex items-center gap-2 px-4 py-2 glass rounded-full mb-6">
+        <span class="text-xs font-bold text-brand-300 tracking-[0.15em] uppercase">Đăng ký</span>
       </div>
-      <h2 class="text-3xl sm:text-5xl lg:text-6xl font-black text-white mb-5 font-display" id="form-section-title">Đăng ký ngay hôm nay</h2>
-      <div class="section-line mx-auto mb-5"></div>
-      <p class="text-lg text-gray-400" id="form-section-desc">Điền thông tin bên dưới, chúng tôi sẽ liên hệ trong 24h</p>
+      <h2 class="text-3xl sm:text-5xl lg:text-6xl font-black text-white mb-4 font-display tracking-tight" id="form-section-title">Đăng ký ngay hôm nay</h2>
+      <div class="section-line mx-auto mb-6"></div>
+      <p class="text-lg text-gray-400 leading-relaxed" id="form-section-desc">Điền thông tin bên dưới, chúng tôi sẽ liên hệ trong 24h</p>
     </div>
-    <form id="register-form" class="reveal glass-strong rounded-3xl p-8 lg:p-10 space-y-6">
+    <form id="register-form" class="reveal glass-strong rounded-3xl p-8 lg:p-10 space-y-5">
       <div>
         <label class="block text-sm font-semibold text-gray-300 mb-2">Họ và tên phụ huynh <span class="text-red-400">*</span></label>
         <input type="text" name="parentName" required placeholder="Nguyễn Văn A" class="w-full px-4 py-4 rounded-xl border border-white/10 bg-white/5 text-white placeholder-gray-500 input-glow outline-none transition-all text-sm" />
@@ -395,37 +446,39 @@
 </div>
 
 <!-- ==================== FOOTER ==================== -->
-<footer id="lien-he" class="bg-[#0f1638] text-white relative">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-    <div class="grid md:grid-cols-3 gap-12">
+<footer id="lien-he" class="bg-[#0a0f24] text-white relative overflow-hidden">
+  <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand-500/20 to-transparent"></div>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
+    <div class="grid md:grid-cols-3 gap-12 lg:gap-16">
       <div>
-        <div class="flex items-center gap-3 mb-5">
-          <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg">N</div>
-          <span class="text-xl font-bold font-display"><span id="footer-brand">Ngữ Văn</span><span class="text-accent-400" id="footer-brand-accent"> THCS</span></span>
+        <div class="flex items-center gap-3 mb-6">
+          <div id="footer-logo-fallback" class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm">N</div>
+          <img id="footer-logo" src="" alt="Logo" class="w-10 h-10 rounded-xl object-cover" style="display:none"/>
+          <span class="text-lg font-bold font-display tracking-tight"><span id="footer-brand">Ngữ Văn</span> <span class="text-accent-400" id="footer-brand-accent">THCS</span></span>
         </div>
-        <p class="text-gray-400 text-sm leading-relaxed mb-5" id="footer-desc">Khơi nguồn tư duy, bứt phá điểm số. Lớp học Ngữ Văn THCS chất lượng cao với hơn 10 năm kinh nghiệm.</p>
+        <p class="text-gray-400 text-sm leading-relaxed mb-6" id="footer-desc">Khơi nguồn tư duy, bứt phá điểm số. Lớp học Ngữ Văn THCS chất lượng cao với hơn 10 năm kinh nghiệm.</p>
         <div class="flex items-center gap-2 text-sm text-gray-400">
           <span>📞</span>
           <span>Hotline: <span id="footer-hotline" class="text-white font-medium">0xxx.xxx.xxx</span></span>
         </div>
       </div>
       <div>
-        <h4 class="font-bold mb-5 text-white font-display text-lg">Liên kết nhanh</h4>
+        <h4 class="font-bold mb-6 text-white font-display text-base">Liên kết nhanh</h4>
         <ul class="space-y-3">
-          <li><a href="#khoa-hoc" class="text-gray-400 hover:text-white text-sm transition-colors flex items-center gap-2 hover:translate-x-1 transition-transform">→ Khóa học</a></li>
-          <li><a href="#lich-hoc" class="text-gray-400 hover:text-white text-sm transition-colors flex items-center gap-2 hover:translate-x-1 transition-transform">→ Lịch học</a></li>
-          <li><a href="#dang-ky" class="text-gray-400 hover:text-white text-sm transition-colors flex items-center gap-2 hover:translate-x-1 transition-transform">→ Đăng ký</a></li>
+          <li><a href="#khoa-hoc" class="text-gray-400 hover:text-white text-sm transition-all duration-300 flex items-center gap-2 hover:translate-x-1">→ Khóa học</a></li>
+          <li><a href="#lich-hoc" class="text-gray-400 hover:text-white text-sm transition-all duration-300 flex items-center gap-2 hover:translate-x-1">→ Lịch học</a></li>
+          <li><a href="#dang-ky" class="text-gray-400 hover:text-white text-sm transition-all duration-300 flex items-center gap-2 hover:translate-x-1">→ Đăng ký</a></li>
         </ul>
       </div>
       <div>
-        <h4 class="font-bold mb-5 text-white font-display text-lg">Địa chỉ</h4>
-        <p class="text-gray-400 text-sm mb-5" id="footer-address">[Địa chỉ cụ thể của lớp học]</p>
-        <div class="map-container rounded-2xl overflow-hidden border border-white/10">
-          <iframe id="footer-map" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3919.5!2d106.7!3d10.8!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTDAJzQ4JzAwLjAiTiAxMDbKwDQyJzAwLjAiRQ!5e0!3m2!1svi!2s!4v1234567890" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" class="grayscale opacity-70"></iframe>
+        <h4 class="font-bold mb-6 text-white font-display text-base">Địa chỉ</h4>
+        <p class="text-gray-400 text-sm mb-6" id="footer-address">[Địa chỉ cụ thể của lớp học]</p>
+        <div class="map-container rounded-xl overflow-hidden border border-white/10">
+          <iframe id="footer-map" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3919.5!2d106.7!3d10.8!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTDAJzQ4JzAwLjAiTiAxMDbKwDQyJzAwLjAiRQ!5e0!3m2!1svi!2s!4v1234567890" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" class="grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all duration-500"></iframe>
         </div>
       </div>
     </div>
-    <div class="mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="mt-14 pt-8 border-t border-white/[0.04] flex flex-col sm:flex-row items-center justify-between gap-4">
       <p class="text-gray-500 text-sm">© 2025 Ngữ Văn THCS. All rights reserved.</p>
       <p class="text-gray-600 text-xs">Made with ❤️ để các em học tốt hơn</p>
     </div>
@@ -496,6 +549,26 @@
       if (logoImg) logoImg.style.display = 'none';
       if (logoFallback) logoFallback.style.display = 'block';
     }
+
+    // Footer logo (sync with same data)
+    var footerLogo = document.getElementById('footer-logo');
+    var footerLogoFallback = document.getElementById('footer-logo-fallback');
+    if (footerLogo && d.logoUrl && d.logoUrl.length > 0) {
+      footerLogo.src = d.logoUrl;
+      footerLogo.style.display = 'block';
+      if (footerLogoFallback) footerLogoFallback.style.display = 'none';
+    } else {
+      if (footerLogo) footerLogo.style.display = 'none';
+      if (footerLogoFallback) footerLogoFallback.style.display = 'block';
+    }
+
+    // Footer brand text (sync with site_name settings)
+    var footerBrand = document.getElementById('footer-brand');
+    var footerBrandAccent = document.getElementById('footer-brand-accent');
+    if (footerBrand && d.siteName) footerBrand.textContent = d.siteName;
+    if (footerBrandAccent && d.siteNameAccent) footerBrandAccent.textContent = d.siteNameAccent;
+
+
 
     // FABs
     var fabZ = document.getElementById('fab-zalo');
@@ -576,20 +649,25 @@
   }
 
   function initReveal(){
-    var els = document.querySelectorAll('.reveal:not(.visible), .reveal-left:not(.visible), .reveal-right:not(.visible), .reveal-scale:not(.visible)');
-    var obs = new IntersectionObserver(function(entries){
-      entries.forEach(function(e){
-        if(e.isIntersecting){
-          var delay = e.target.dataset.delay||0;
-          setTimeout(function(){e.target.classList.add('visible');},delay*120);
-          obs.unobserve(e.target);
-        }
-      });
-    },{threshold:0.08,rootMargin:'0px 0px -40px 0px'});
-    els.forEach(function(el,i){el.dataset.delay=i%5;obs.observe(el);});
+  var els = document.querySelectorAll('.reveal:not(.visible), .reveal-left:not(.visible), .reveal-right:not(.visible), .reveal-scale:not(.visible)');
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        var delay = parseInt(e.target.dataset.delay)||0;
+        setTimeout(function(){e.target.classList.add('visible');},delay*80);
+        obs.unobserve(e.target);
+      }
+    });
+  },{threshold:0.06,rootMargin:'0px 0px -60px 0px'});
+  els.forEach(function(el,i){el.dataset.delay=i%6;obs.observe(el);});
   }
 
   document.addEventListener('DOMContentLoaded',function(){
+    // Page load fade-in
+    document.body.style.opacity = '0';
+    document.body.style.transition = 'opacity 0.5s cubic-bezier(.16,1,.3,1)';
+    requestAnimationFrame(function(){ document.body.style.opacity = '1'; });
+
     loadData().then(function(){ renderPage(); });
 
     var mt = document.getElementById('menu-toggle'), mm = document.getElementById('mobile-menu'), im = document.getElementById('icon-menu'), ic = document.getElementById('icon-close');
